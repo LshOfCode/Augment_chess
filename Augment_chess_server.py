@@ -3,7 +3,7 @@ from fastapi import WebSocket, WebSocketDisconnect
 import json
 from pathlib import Path
 from uuid import uuid4
-
+from pydantic import BaseModel
 from fastapi import Body, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
@@ -26,6 +26,9 @@ app.add_middleware(
 rooms = {}
 connections = {}
 
+class AugmentSelectRequest(BaseModel):
+    player_id: str
+    augment_id: str
 
 def create_room_data():
     return {
@@ -43,6 +46,18 @@ def create_room_data():
             "votes": {"W": False, "B": False},
             "count": 0,
         },
+        "augment": {
+            "active": False,
+            "tier": "gold",
+            "choices": {
+                "W": [],
+                "B": []
+            },
+            "selected": {
+                "W": None,
+                "B": None
+            }
+        }
     }
 
 
@@ -51,6 +66,7 @@ def build_state(room):
     data["clock"] = room["time"]
     data["rematch"] = room["rematch"]
     data["players"] = room["players"]
+    data["augment"] = room["augment"]
     return data
 
 
@@ -78,6 +94,14 @@ def update_clock(room):
         clock[current] = 0
         clock["ended"] = True
         clock["winner"] = "B" if current == "W" else "W"
+
+
+def get_player_color(room, player_id):
+    if room["players"]["W"] == player_id:
+        return "W"
+    if room["players"]["B"] == player_id:
+        return "B"
+    return None
 
 
 @app.get("/")
@@ -126,6 +150,19 @@ def join_room(room_id: str, data: dict = Body(...)):
         # 증강 선택 전이니까 시간 멈춤
         room["time"]["last_update"] = time.time()
         room["time"]["running"] = None
+        room["augment"]["active"] = True
+
+        room["augment"]["choices"]["W"] = [
+            {"id": "a1", "tier": "gold", "title": "캐슬링 금지", "description": "..."},
+            {"id": "a2", "tier": "gold", "title": "언더 프로모션!!", "description": "..."},
+            {"id": "a3", "tier": "gold", "title": "폰 둔화", "description": "..."}
+        ]
+
+        room["augment"]["choices"]["B"] = [
+            {"id": "b1", "tier": "gold", "title": "룩 약화", "description": "..."},
+            {"id": "b2", "tier": "gold", "title": "비숍 약화", "description": "..."},
+            {"id": "b3", "tier": "gold", "title": "전장의 안개", "description": "..."}
+        ]
 
         return {"color": "B"}
 
@@ -139,7 +176,6 @@ def get_state(room_id: str):
     room = rooms[room_id]
     update_clock(room)
     return build_state(room)
-
 
 @app.post("/rooms/{room_id}/move")
 async def move(room_id: str, data: dict = Body(...)):
@@ -222,7 +258,7 @@ def reset_room(room_id: str):
 
     if old_players["W"] is not None and old_players["B"] is not None:
         rooms[room_id]["time"]["last_update"] = time.time()
-        rooms[room_id]["time"]["running"] = rooms[room_id]["board"].turn
+        rooms[room_id]["time"]["running"] = None
 
     return {"success": True}
 
@@ -267,7 +303,7 @@ def reset_room_with_swap(room_id: str):
 
     if new_room["players"]["W"] is not None and new_room["players"]["B"] is not None:
         new_room["time"]["last_update"] = time.time()
-        new_room["time"]["running"] = new_room["board"].turn
+        new_room["time"]["running"] = None
 
     rooms[room_id] = new_room
 
@@ -311,3 +347,31 @@ async def rematch_room(room_id: str, data: dict = Body(...)):
         return {"success": True, "started": True, "state": build_state(rooms[room_id])}
 
     return {"success": True, "started": False, "state": build_state(room)}
+
+@app.post("/rooms/{room_id}/augment/select")
+def select_augment(room_id: str, req: AugmentSelectRequest):
+    room = rooms.get(room_id)
+    if not room:
+        raise HTTPException(status_code=404)
+
+    color = get_player_color(room, req.player_id)
+
+    if room["augment"]["selected"][color] is not None:
+        raise HTTPException(status_code=400)
+
+    room["augment"]["selected"][color] = req.augment_id
+
+    both_done = (
+        room["augment"]["selected"]["W"] is not None and
+        room["augment"]["selected"]["B"] is not None
+    )
+
+    if both_done:
+        room["augment"]["active"] = False
+        room["time"]["last_update"] = time.time()
+        room["time"]["running"] = room["board"].turn
+
+    return {
+        "both_done": both_done,
+        "state": build_state(room)
+    }
