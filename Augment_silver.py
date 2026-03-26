@@ -8,6 +8,9 @@ def apply_no_castling(game, player):
     enemy = 'B' if player == 'W' else 'W'
     game.effects[enemy]["no_castling"] = True
 
+def apply_king_buff(game, player):
+    game.effects[player]["king_buff"] = True
+    game.effects[player]["no_castling"] = True
 
 def apply_pawn_supply(game, player):
     row = 5 if player == "W" else 2
@@ -21,9 +24,9 @@ def apply_pawn_supply(game, player):
         spawn_x, spawn_y = random.choice(empty_cells)
         game.spawn_pawn(player, spawn_x, spawn_y)
 
-def apply_pawn_weaken(game, player):
+def apply_pawn_slow(game, player):
     enemy = 'B' if player == 'W' else 'W'
-    game.effects[enemy]["pawn_weaken"] = 2  # 2개 제한
+    game.effects[enemy]["pawn_slow"] = 2  # 2개 제한
 
 
 def apply_bishop_to_knight(game, player):
@@ -47,11 +50,11 @@ def apply_reorganize(game, player):
 # =========================
 
 SILVER_AUGMENTS = [
-
+    
     {
         "id": "no_castling",
         "name": "캐슬링 금지",
-        "desc": "상대의 캐슬링을 금지시킵니다.",
+        "desc": "상대의 캐슬링이 금지됩니다.",
         "tier": "silver",
         "timing": "start",
         "icon": "Augment_icon/Augment_no_castling.png",
@@ -67,15 +70,25 @@ SILVER_AUGMENTS = [
         "icon": "Augment_icon/Augment_pawn_supply.png",
         "apply": apply_pawn_supply,
     },
+    
+    {
+    "id": "king_buff",
+    "name": "왕권 강화",
+    "desc": "내 킹이 원래 이동 외에 상하좌우로 2칸 이동할 수 있지만 캐슬링이 금지됩니다.",
+    "tier": "silver",
+    "timing": "start",
+    "icon": "Augment_icon/Augment_king_buff.png",
+    "apply": apply_king_buff,
+    },
 
     {
-        "id": "pawn_weaken",
-        "name": "폰 약화",
-        "desc": "상대의 처음 2개의 기본 폰은 2칸 전진이 불가능합니다.",
+        "id": "pawn_slow",
+        "name": "달팽이 폰",
+        "desc": "상대의 처음 2개의 기본 폰은 2칸 전진이 금지됩니다.",
         "tier": "silver",
         "timing": "start",
-        "icon": "Augment_icon/Augment_pawn_weaken.png",
-        "apply": apply_pawn_weaken,
+        "icon": "Augment_icon/Augment_pawn_slow.png",
+        "apply": apply_pawn_slow,
     },
 
     {

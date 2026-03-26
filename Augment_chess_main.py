@@ -73,26 +73,26 @@ class Board:
         if promotion not in {"Q", "R", "B", "N"}:
             promotion = "Q"
 
-        consume_pawn_weaken = False
+        consume_pawn_slow = False
 
         if piece.name == "P":
             start_row = 6 if piece.color == "W" else 1
-            weaken_count = self.effects[piece.color].get("pawn_weaken", 0)
+            weaken_count = self.effects[piece.color].get("pawn_slow", 0)
 
             if y1 == start_row and weaken_count > 0:
                 if x1 == x2 and abs(y2 - y1) == 2:
                     return {
                         "success": False,
-                        "message": "폰 약화: 처음 2개의 폰은 2칸 전진 불가"
+                        "message": "달팽이 폰: 처음 2개의 폰은 2칸 전진 불가"
                     }
-                consume_pawn_weaken = True
+                consume_pawn_slow = True
 
         self._apply_move(x1, y1, x2, y2, promotion)
 
-        if consume_pawn_weaken:
-            self.effects[piece.color]["pawn_weaken"] -= 1
-            if self.effects[piece.color]["pawn_weaken"] <= 0:
-                self.effects[piece.color].pop("pawn_weaken", None)
+        if consume_pawn_slow:
+            self.effects[piece.color]["pawn_slow"] -= 1
+            if self.effects[piece.color]["pawn_slow"] <= 0:
+                self.effects[piece.color].pop("pawn_slow", None)
 
         self.turn = "B" if self.turn == "W" else "W"
         if self.turn == "W":
@@ -252,10 +252,25 @@ class Board:
             return (adx == ady or x1 == x2 or y1 == y2) and self._clear(x1, y1, x2, y2)
 
         if piece.name == "K":
+            # 원래 1칸 이동
             if adx <= 1 and ady <= 1:
                 return True
+
+            # 왕권 강화: 상하좌우로 정확히 2칸
+            if self.effects[piece.color].get("king_buff"):
+                if (adx == 2 and ady == 0) or (adx == 0 and ady == 2):
+                    mid_x = x1 + (dx // 2)
+                    mid_y = y1 + (dy // 2)
+
+                    if self.grid[mid_y][mid_x] is not None:
+                        return False
+
+                    return True
+
+            # 캐슬링
             if ady == 0 and adx == 2:
                 return self._can_castle(piece.color, x1, y1, x2)
+
             return False
 
         return False

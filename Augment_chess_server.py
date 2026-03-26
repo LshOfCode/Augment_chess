@@ -168,10 +168,10 @@ async def join_room(room_id: str, data: dict = Body(...)):
                 "description": "자신의 모든 비숍이 나이트로 전환됩니다."
             },
             {
-                "id": "pawn_supply",
+                "id": "king_buff",
                 "tier": "silver",
-                "title": "폰 공급",
-                "description": "자신의 뒤에서 세 번째 줄에서 빈칸 하나를 골라 폰을 생성합니다."
+                "title": "왕권 강화",
+                "description": "내 킹이 원래 이동 외에 상하좌우로 2칸 이동할 수 있지만 캐슬링이 금지됩니다."
             },
             {
                 "id": "pawn_retreat",
@@ -189,10 +189,10 @@ async def join_room(room_id: str, data: dict = Body(...)):
                 "description": "상대의 캐슬링을 금지시킵니다."
             },
             {
-                "id": "pawn_weaken",
+                "id": "pawn_slow",
                 "tier": "silver",
-                "title": "폰 약화",
-                "description": "상대의 처음 2번 2칸 전진 시도는 불가능합니다."
+                "title": "달팽이 폰",
+                "description": "상대의 처음 2번 2칸 전진 시도는 금지됩니다."
             },
             {
                 "id": "reorganize",
