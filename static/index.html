@@ -379,29 +379,29 @@
         }
 
         .augment-card {
-    width: 250px;
-    height: 420px;
-    border-radius: 24px;
-    position: relative;
-    overflow: hidden;
-    cursor: pointer;
-    border: 3px solid rgba(255, 255, 255, 0.24);
-    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.34);
-    transition:
-        transform 0.38s cubic-bezier(0.18, 0.9, 0.25, 1.28),
-        box-shadow 0.22s ease,
-        border-color 0.22s ease,
-        filter 0.22s ease,
-        opacity 0.30s ease;
-    transform: translateY(34px) scale(0.68);
-    opacity: 0;
-    filter: saturate(0.96);
-    color: #201500;
-    padding: 16px;
-    box-sizing: border-box;
-    display: flex;
-    flex-direction: column;
-}
+            width: 250px;
+            height: 420px;
+            border-radius: 24px;
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+            border: 3px solid rgba(255, 255, 255, 0.24);
+            box-shadow: 0 16px 36px rgba(0, 0, 0, 0.34);
+            transition:
+                transform 0.38s cubic-bezier(0.18, 0.9, 0.25, 1.28),
+                box-shadow 0.22s ease,
+                border-color 0.22s ease,
+                filter 0.22s ease,
+                opacity 0.30s ease;
+            transform: translateY(34px) scale(0.68);
+            opacity: 0;
+            filter: saturate(0.96);
+            color: #201500;
+            padding: 16px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+        }
 
         .augment-card.show {
             transform: translateY(0) scale(1);
@@ -442,18 +442,18 @@
         }
 
         .augment-card::after {
-    content: "";
-    position: absolute;
-    inset: -18%;
-    background: radial-gradient(circle, rgba(255,255,255,0.16), transparent 58%);
-    opacity: 0;
-    transition: opacity 0.30s ease;
-    pointer-events: none;
-}
+            content: "";
+            position: absolute;
+            inset: -18%;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.16), transparent 58%);
+            opacity: 0;
+            transition: opacity 0.30s ease;
+            pointer-events: none;
+        }
 
-.augment-card.show::after {
-    opacity: 1;
-}
+        .augment-card.show::after {
+            opacity: 1;
+        }
 
         .augment-card.silver {
             background: linear-gradient(180deg, #5f656d 0%, #8b939d 28%, #bbc3cc 62%, #eef2f6 100%);
@@ -730,14 +730,14 @@
 
                 overlay.classList.remove("show");
                 if (augmentCloseTimeout) {
-    clearTimeout(augmentCloseTimeout);
-    augmentCloseTimeout = null;
-}
+                    clearTimeout(augmentCloseTimeout);
+                    augmentCloseTimeout = null;
+                }
                 cards.forEach(card => card.classList.remove("show"));
                 if (augmentCloseTimeout) {
-    clearTimeout(augmentCloseTimeout);
-    augmentCloseTimeout = null;
-}
+                    clearTimeout(augmentCloseTimeout);
+                    augmentCloseTimeout = null;
+                }
                 augmentOpen = false;
             }
 
@@ -1029,6 +1029,8 @@
                 }
 
                 if (!augmentState?.active && augmentOpen) {
+                    hideAugmentOverlay();
+                    augmentShownThisGame = false;
                 }
 
                 if (data.clock?.ended || gameEnded) stopClockTicker();
@@ -1549,26 +1551,19 @@
                 disableAugmentCards();
 
                 if (autoPicked) {
-    setAugmentStatus("시간 초과! 왼쪽 증강이 자동 선택되었습니다");
-} else {
-    setAugmentStatus("선택 완료! 상대가 고르는 중...");
-}
+                    setAugmentStatus("시간 초과! 왼쪽 증강이 자동 선택되었습니다");
+                } else {
+                    setAugmentStatus("선택 완료! 상대가 고르는 중...");
+                }
 
-try {
-    const result = await submitAugmentSelection(index, autoPicked);
+                try {
+                    const result = await submitAugmentSelection(index, autoPicked);
 
-    if (result?.both_done) {
-        setAugmentStatus("상대 선택 완료!");
-
-        if (!augmentCloseTimeout) {
-            augmentCloseTimeout = setTimeout(() => {
-                hideAugmentOverlay();
-                augmentCloseTimeout = null;
-            }, 2000);
-        }
-    } else {
-        setAugmentWaiting(true);
-    }
+                    if (result?.both_done) {
+                        hideAugmentOverlay();
+                    } else {
+                        setAugmentWaiting(true);
+                    }
 
                     if (result?.state) {
                         currentState = result.state;
