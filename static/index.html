@@ -182,27 +182,30 @@ img {
 
 /* ===== 증강 오버레이 ===== */
 #augmentOverlay {
-    position: absolute;
+    position: fixed;
     inset: 0;
     display: none;
     justify-content: center;
     align-items: center;
     background: rgba(0, 0, 0, 0.78);
     backdrop-filter: blur(4px);
-    z-index: 120;
+    z-index: 1000;
 }
 #augmentOverlay.show {
     display: flex;
 }
 #augmentPanel {
-    width: min(920px, 94vw);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 18px;
+    position: relative;
+    width: 100vw;
+    height: 100vh;
     pointer-events: auto;
 }
+
 #augmentStatus {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
     background: white;
     color: black;
     border-radius: 12px;
@@ -212,14 +215,21 @@ img {
     min-width: 280px;
     text-align: center;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+    z-index: 2;
 }
+
 #augmentTimer {
-    width: min(560px, 82vw);
-    height: 14px;
+    position: absolute;
+    top: 150px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(820px, 72vw);
+    height: 18px;
     background: rgba(255, 255, 255, 0.16);
     border-radius: 999px;
     overflow: hidden;
     box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08);
+    z-index: 2;
 }
 #augmentBar {
     width: 100%;
@@ -236,66 +246,67 @@ img {
 #augmentBar.diamond {
     background: linear-gradient(90deg, #056d91 0%, #1497c7 35%, #37c4ea 70%, #d5fbff 100%);
 }
-#augmentCards {
-    width: 100%;
-    display: flex;
-    justify-content: center;
-    align-items: stretch;
-    gap: 22px;
-    flex-wrap: wrap;
+
+
+.augment-card.pos-left {
+    left: 90px;
+    top: 240px;
 }
-.augment-card {
-    width: 230px;
-    min-height: 280px;
-    border-radius: 18px;
-    position: relative;
-    overflow: hidden;
-    cursor: pointer;
-    border: 2px solid rgba(255,255,255,0.18);
-    box-shadow: 0 16px 40px rgba(0,0,0,0.35);
-    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, filter 0.18s ease;
-    transform: translateY(12px) scale(0.96);
-    opacity: 0;
-    filter: saturate(0.95);
+
+.augment-card.pos-center {
+    left: 50%;
+    top: 420px;
+    transform: translateX(-50%) scale(0.96);
 }
+
+.augment-card.pos-right {
+    right: 90px;
+    top: 240px;
+}
+
+.augment-card.show.pos-left {
+    transform: scale(1);
+    opacity: 1;
+}
+
+.augment-card.show.pos-center {
+    transform: translateX(-50%) scale(1);
+    opacity: 1;
+}
+
+.augment-card.show.pos-right {
+    transform: scale(1);
+    opacity: 1;
+}
+
 .augment-card.show {
     transform: translateY(0) scale(1);
     opacity: 1;
 }
-.augment-card:hover {
-    transform: translateY(-6px) scale(1.03);
-    box-shadow: 0 22px 48px rgba(0,0,0,0.45);
-    border-color: rgba(255,255,255,0.42);
-    filter: saturate(1.04);
+
+.augment-badge {
+    font-size: 15px;
+    padding: 9px 14px;
 }
-.augment-card.disabled {
-    pointer-events: none;
-    opacity: 0.65;
-    filter: grayscale(0.2);
+
+.augment-index {
+    font-size: 18px;
 }
-.augment-card.selected-card {
-    outline: 3px solid rgba(255,255,255,0.82);
-    transform: translateY(-8px) scale(1.04);
+
+.augment-name {
+    font-size: 30px;
+    line-height: 1.15;
+    margin-top: 28px;
 }
-.augment-card::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: radial-gradient(circle at top right, rgba(255,255,255,0.22), transparent 42%);
-    pointer-events: none;
+
+.augment-desc {
+    font-size: 16px;
+    line-height: 1.6;
+    margin-top: 18px;
 }
-.augment-card.silver {
-    background: linear-gradient(180deg, #4e545d 0%, #767d88 26%, #a9b1bc 56%, #dfe5ec 100%);
-    color: #0e1116;
-}
-.augment-card.gold {
-    background: linear-gradient(180deg, #735200 0%, #b78400 24%, #efc13b 56%, #ffeaa0 100%);
-    color: #221700;
-}
-.augment-card.diamond {
-    background: linear-gradient(180deg, #045878 0%, #0f89b4 26%, #2dbfe7 56%, #d7fbff 100%);
-    color: #03141a;
-}
+
+
+
 .augment-card-header {
     padding: 16px 16px 10px 16px;
     display: flex;
@@ -312,27 +323,148 @@ img {
     box-shadow: inset 0 0 0 1px rgba(255,255,255,0.18);
     letter-spacing: 0.4px;
 }
+
+#augmentCards {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 26px;
+    flex-wrap: wrap;
+    margin-top: 90px;
+}
+
+.augment-card {
+    width: 290px;
+    min-height: 430px;
+    border-radius: 26px;
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    border: 3px solid rgba(255,255,255,0.25);
+    box-shadow: 0 18px 44px rgba(0,0,0,0.40);
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, filter 0.18s ease;
+    transform: translateY(12px) scale(0.96);
+    opacity: 0;
+    filter: saturate(0.96);
+    color: #201500;
+    padding: 18px 18px 20px 18px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.augment-card.show {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+}
+
+.augment-card:hover {
+    transform: translateY(-8px) scale(1.03);
+    box-shadow: 0 24px 54px rgba(0,0,0,0.48);
+    border-color: rgba(255,255,255,0.44);
+    filter: saturate(1.03);
+}
+
+.augment-card.disabled {
+    pointer-events: none;
+    opacity: 0.65;
+    filter: grayscale(0.15);
+}
+
+.augment-card.selected-card {
+    outline: 4px solid rgba(255,255,255,0.85);
+    transform: translateY(-10px) scale(1.04);
+}
+
+.augment-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(circle at top center, rgba(255,255,255,0.20), transparent 34%),
+        linear-gradient(180deg, rgba(255,255,255,0.05), transparent 28%);
+    pointer-events: none;
+}
+
+.augment-card.silver {
+    background: linear-gradient(180deg, #5f656d 0%, #8b939d 28%, #bbc3cc 62%, #eef2f6 100%);
+    color: #11161b;
+}
+
+.augment-card.gold {
+    background: linear-gradient(180deg, #8c6700 0%, #c99708 26%, #f0c840 58%, #fff0b0 100%);
+    color: #221700;
+}
+
+.augment-card.diamond {
+    background: linear-gradient(180deg, #0a5f7f 0%, #1494c0 26%, #43c9ee 58%, #dcfcff 100%);
+    color: #07181d;
+}
+
+/* 예전 헤더 안 씀 */
+.augment-card-header {
+    display: none;
+}
+
+/* 예전 티어 뱃지 안 씀 */
+.augment-tier-badge {
+    display: none;
+}
+
+/* 예전 숫자 안 씀 */
 .augment-card-index {
-    font-size: 16px;
-    font-weight: 900;
-    opacity: 0.86;
+    display: none;
 }
+
 .augment-card-body {
-    padding: 8px 18px 20px 18px;
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-rows: 72px 1fr 118px;
+    row-gap: 12px;
+    height: 100%;
+    padding: 0;
 }
+
 .augment-card-title {
     font-size: 28px;
     font-weight: 900;
-    line-height: 1.1;
-    margin-bottom: 12px;
+    line-height: 1.05;
     word-break: keep-all;
+    letter-spacing: -0.8px;
+    margin: 0;
+    white-space: pre-line;
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-start;
 }
+
 .augment-card-desc {
-    font-size: 15px;
-    line-height: 1.55;
+    font-size: 17px;
+    font-weight: 900;
+    line-height: 1.18;
     word-break: keep-all;
-    opacity: 0.95;
+    letter-spacing: -0.4px;
+    color: #2a1d00;
+    background: rgba(255,255,255,0.92);
+    border-radius: 18px;
+    padding: 14px 14px 14px 14px;
+    box-shadow: inset 0 0 0 2px rgba(255,255,255,0.55);
+    margin: 0;
+    white-space: pre-line;
+    display: flex;
+    align-items: flex-start;
 }
+
+.augment-card-art {
+    border-radius: 18px;
+    background: rgba(255,255,255,0.08);
+    box-shadow: inset 0 0 0 2px rgba(255,255,255,0.10);
+    min-height: 0;
+}
+
 .augment-auto-text {
     font-size: 14px;
     color: rgba(255,255,255,0.92);
@@ -381,17 +513,34 @@ img {
         height: min(8vw, 42px);
     }
     #augmentStatus {
-        font-size: 18px;
-        min-width: 0;
-        width: min(90vw, 420px);
-    }
+    position: absolute;
+    top: 52px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: white;
+    color: black;
+    border-radius: 14px;
+    padding: 16px 28px;
+    font-size: 24px;
+    font-weight: bold;
+    min-width: 360px;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+    z-index: 2;
+}
     .augment-card {
-        width: min(86vw, 320px);
-        min-height: 224px;
-    }
-    .augment-card-title {
-        font-size: 24px;
-    }
+    width: min(84vw, 260px);
+    height: 390px;
+}
+.augment-card-body {
+    grid-template-rows: 66px 1fr 110px;
+}
+.augment-card-title {
+    font-size: 26px;
+}
+.augment-card-desc {
+    font-size: 16px;
+}
 }
 </style>
 </head>
@@ -1108,12 +1257,9 @@ function buildAugmentCard(option, index) {
     card.dataset.tier = tier;
 
     card.innerHTML = `
-        <div class="augment-card-header">
-            <div class="augment-tier-badge">${tierLabel(tier)}</div>
-            <div class="augment-card-index">${index + 1}</div>
-        </div>
         <div class="augment-card-body">
             <div class="augment-card-title">${title}</div>
+            <div class="augment-card-art"></div>
             <div class="augment-card-desc">${description}</div>
         </div>
     `;
@@ -1175,8 +1321,8 @@ function renderAugmentCards(options) {
     });
 
     requestAnimationFrame(() => {
-        [...wrap.children].forEach((card, index) => {
-            setTimeout(() => card.classList.add("show"), 40 * index);
+        [...wrap.children].forEach((card) => {
+            card.classList.add("show");
         });
     });
 }
@@ -1331,7 +1477,7 @@ function openDebugAugment() {
                 description: "상대의 폰은 시작할 때 2칸 전진할 수 없습니다."
             }
         ],
-        durationMs: 7000
+        durationMs: 25000
     });
 }
 
