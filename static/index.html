@@ -780,11 +780,17 @@ function setClockUI(clock) {
     const top = document.getElementById("topClock");
     const bottom = document.getElementById("bottomClock");
 
-    top.innerText = `흑 ${formatTime(b)}`;
-    bottom.innerText = `백 ${formatTime(w)}`;
-
-    top.style.color = b <= 10 ? "red" : "black";
-    bottom.style.color = w <= 10 ? "red" : "black";
+    if (myColor === "B") {
+        top.innerText = `백 ${formatTime(w)}`;
+        bottom.innerText = `흑 ${formatTime(b)}`;
+        top.style.color = w <= 10 ? "red" : "black";
+        bottom.style.color = b <= 10 ? "red" : "black";
+    } else {
+        top.innerText = `흑 ${formatTime(b)}`;
+        bottom.innerText = `백 ${formatTime(w)}`;
+        top.style.color = b <= 10 ? "red" : "black";
+        bottom.style.color = w <= 10 ? "red" : "black";
+    }
 }
 
 function startClockTicker() {
@@ -915,15 +921,28 @@ function renderBoardFromState(data) {
     setClockUI(data.clock);
     updateRematchButton(data.rematch);
 
-    const bothPlayersReady = !!(data.players && data.players.W && data.players.B);
+    const augmentState = data.augment;
 
 if (
-    bothPlayersReady &&
+    augmentState?.active &&
     !augmentShownThisGame &&
-    !gameEnded
+    !gameEnded &&
+    (myColor === "W" || myColor === "B")
 ) {
     augmentShownThisGame = true;
-    showAugmentOverlay();
+
+    const myChoices = augmentState.choices?.[myColor] ?? [];
+
+    showAugmentOverlay({
+        tier: augmentState.tier || "gold",
+        myTurn: augmentState.selected?.[myColor] == null,
+        options: myChoices,
+        durationMs: 25000
+    });
+}
+
+if (!augmentState?.active && augmentOpen) {
+    hideAugmentOverlay();
 }
 
     if (data.clock?.ended || gameEnded) stopClockTicker();
@@ -1342,7 +1361,7 @@ function showAugmentOverlay({
     tier = "silver",
     myTurn = true,
     options = DEBUG_AUGMENTS,
-    durationMs = 8000
+    durationMs = 25000
 } = {}) {
     const overlay = document.getElementById("augmentOverlay");
 
@@ -1410,21 +1429,24 @@ function hideAugmentOverlay() {
 }
 
 async function submitAugmentSelection(index, autoPicked = false) {
-    /*
-    서버 붙일 때 여기서 전송
-    예:
-    await fetch(`${API_BASE}/rooms/${roomId}/augment/select`, {
+    const options = currentState?.augment?.choices?.[myColor] ?? [];
+    const picked = options[index];
+    if (!picked) throw new Error("augment option not found");
+
+    const res = await fetch(`${API_BASE}/rooms/${roomId}/augment/select`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
             player_id: playerId,
-            augment_index: index,
-            auto_picked: autoPicked
+            augment_id: picked.id
         })
     });
-    */
 
-    console.log("augment selected:", { index, autoPicked });
+    if (!res.ok) {
+        throw new Error("augment select failed");
+    }
+
+    return await res.json();
 }
 
 async function selectAugment(index, autoPicked = false) {
@@ -1439,20 +1461,26 @@ async function selectAugment(index, autoPicked = false) {
     disableAugmentCards();
 
     if (autoPicked) {
-        setAugmentStatus("시간 초과! 왼쪽 증강이 자동 선택되었습니다");
-    } else {
-        setAugmentStatus("증강 선택 완료");
-    }
+    setAugmentStatus("시간 초과! 왼쪽 증강이 자동 선택되었습니다");
+} else {
+    setAugmentStatus("증강 선택 완료");
+}
 
-    try {
-        await submitAugmentSelection(index, autoPicked);
-    } catch (err) {
-        console.error(err);
-    }
+try {
+    const result = await submitAugmentSelection(index, autoPicked);
 
-    setTimeout(() => {
+    if (result?.both_done) {
         hideAugmentOverlay();
-    }, 700);
+    } else {
+        setAugmentWaiting(true);
+    }
+
+    if (result?.state) {
+        currentState = result.state;
+    }
+} catch (err) {
+    console.error(err);
+}
 }
 
 function openDebugAugment() {

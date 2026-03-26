@@ -124,7 +124,7 @@ def create_room():
 
 
 @app.post("/rooms/{room_id}/join")
-def join_room(room_id: str, data: dict = Body(...)):
+async def join_room(room_id: str, data: dict = Body(...)):
     if room_id not in rooms:
         raise HTTPException(status_code=404, detail="room not found")
 
@@ -163,6 +163,11 @@ def join_room(room_id: str, data: dict = Body(...)):
             {"id": "b2", "tier": "gold", "title": "비숍 약화", "description": "..."},
             {"id": "b3", "tier": "gold", "title": "전장의 안개", "description": "..."}
         ]
+
+        await broadcast(room_id, {
+            "type": "update",
+            "state": build_state(room)
+        })
 
         return {"color": "B"}
 
