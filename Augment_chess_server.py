@@ -1,0 +1,242 @@
+import time
+from fastapi import WebSocket, WebSocketDisconnect
+import json
+from pathlib import Path
+from uuid import uuid4
+
+from fastapi import Body, FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
+
+from Augment_chess_main import Board
+
+BASE_DIR = Path(__file__).resolve().parent
+STATIC_DIR = BASE_DIR / "static"
+
+app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+rooms = {}
+connections = {}
+
+
+def create_room_data():
+    return {
+        "board": Board(),
+        "players": {"W": None, "B": None},
+        "time": {
+            "W": 600,
+            "B": 600,
+            "last_update": time.time(),
+            "running": "W",
+            "ended": False,
+            "winner": None,
+        },
+    }
+
+
+def build_state(room):
+    data = room["board"].to_dict()
+    data["clock"] = room["time"]
+    return data
+
+
+def update_clock(room):
+    clock = room["time"]
+
+    if room["players"]["W"] is None or room["players"]["B"] is None:
+        clock["last_update"] = time.time()
+        return
+
+    if clock["ended"]:
+        return
+
+    now = time.time()
+    elapsed = now - clock["last_update"]
+    current = clock["running"]
+    clock[current] -= elapsed
+    clock["last_update"] = now
+
+    if clock[current] <= 0:
+        clock[current] = 0
+        clock["ended"] = True
+        clock["winner"] = "B" if current == "W" else "W"
+
+
+@app.get("/")
+def index():
+    return FileResponse(STATIC_DIR / "index.html")
+
+
+if STATIC_DIR.exists():
+    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+    pieces_dir = STATIC_DIR / "pieces"
+    if pieces_dir.exists():
+        app.mount("/pieces", StaticFiles(directory=pieces_dir), name="pieces")
+
+
+@app.post("/create_room")
+def create_room():
+    room_id = uuid4().hex[:6].upper()
+    rooms[room_id] = create_room_data()
+    return {"room_id": room_id}
+
+
+@app.post("/rooms/{room_id}/join")
+def join_room(room_id: str, data: dict = Body(...)):
+    if room_id not in rooms:
+        raise HTTPException(status_code=404, detail="room not found")
+
+    player_id = data.get("player_id")
+    if not player_id:
+        raise HTTPException(status_code=400, detail="player_id required")
+
+    room = rooms[room_id]
+    players = room["players"]
+
+    if players["W"] == player_id:
+        return {"color": "W"}
+    if players["B"] == player_id:
+        return {"color": "B"}
+
+    if players["W"] is None:
+        players["W"] = player_id
+        return {"color": "W"}
+
+    if players["B"] is None:
+        players["B"] = player_id
+        room["time"]["last_update"] = time.time()
+        room["time"]["running"] = room["board"].turn
+        return {"color": "B"}
+
+    return {"color": "S"}
+
+
+@app.get("/rooms/{room_id}/state")
+def get_state(room_id: str):
+    if room_id not in rooms:
+        raise HTTPException(status_code=404, detail="room not found")
+    room = rooms[room_id]
+    update_clock(room)
+    return build_state(room)
+
+
+@app.post("/rooms/{room_id}/move")
+async def move(room_id: str, data: dict = Body(...)):
+    if room_id not in rooms:
+        raise HTTPException(status_code=404, detail="room not found")
+
+    room = rooms[room_id]
+    board = room["board"]
+    update_clock(room)
+
+    if room["time"]["ended"]:
+        return {
+            "result": {"success": False, "message": "시간 종료"},
+            "state": build_state(room),
+        }
+
+    player_id = data.get("player_id")
+    if not player_id:
+        raise HTTPException(status_code=400, detail="player_id required")
+
+    if room["players"]["W"] == player_id:
+        player_color = "W"
+    elif room["players"]["B"] == player_id:
+        player_color = "B"
+    else:
+        return {
+            "result": {"success": False, "message": "관전자는 움직일 수 없음"},
+            "state": build_state(room),
+        }
+
+    game_state = board.get_game_state()
+    if game_state["checkmate"] or game_state["draw"]:
+        return {
+            "result": {"success": False, "message": "이미 끝난 게임임"},
+            "state": build_state(room),
+        }
+
+    if board.turn != player_color:
+        return {
+            "result": {"success": False, "message": "지금 네 턴이 아님"},
+            "state": build_state(room),
+        }
+
+    x1, y1, x2, y2 = data["x1"], data["y1"], data["x2"], data["y2"]
+    piece = board.grid[y1][x1]
+    if piece is None:
+        return {
+            "result": {"success": False, "message": "거기에 기물이 없음"},
+            "state": build_state(room),
+        }
+
+    if piece.color != player_color:
+        return {
+            "result": {"success": False, "message": "네 기물만 움직일 수 있음"},
+            "state": build_state(room),
+        }
+
+    result = board.move_piece_web(x1, y1, x2, y2)
+    if result["success"]:
+        room["time"]["running"] = board.turn
+        room["time"]["last_update"] = time.time()
+
+        await broadcast(room_id, {
+            "type": "update",
+            "state": build_state(room)
+        })
+
+    return {"result": result, "state": build_state(room)}
+
+
+@app.post("/rooms/{room_id}/reset")
+def reset_room(room_id: str):
+    if room_id not in rooms:
+        raise HTTPException(status_code=404, detail="room not found")
+
+    old_players = rooms[room_id]["players"]
+    rooms[room_id] = create_room_data()
+    rooms[room_id]["players"] = old_players
+
+    if old_players["W"] is not None and old_players["B"] is not None:
+        rooms[room_id]["time"]["last_update"] = time.time()
+        rooms[room_id]["time"]["running"] = rooms[room_id]["board"].turn
+
+    return {"success": True}
+
+@app.websocket("/ws/{room_id}")
+async def websocket_endpoint(websocket: WebSocket, room_id: str):
+    await websocket.accept()
+
+    if room_id not in connections:
+        connections[room_id] = []
+
+    connections[room_id].append(websocket)
+
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        connections[room_id].remove(websocket)
+
+async def broadcast(room_id: str, message: dict):
+    if room_id not in connections:
+        return
+
+    dead = []
+    for ws in connections[room_id]:
+        try:
+            await ws.send_text(json.dumps(message))
+        except:
+            dead.append(ws)
+
+    for ws in dead:
+        connections[room_id].remove(ws)

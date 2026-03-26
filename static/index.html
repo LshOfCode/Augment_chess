@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Online Chess</title>
+<style>
+body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 24px 16px;
+    background: #222;
+    color: white;
+    font-family: Arial, sans-serif;
+}
+#topbar {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+#roomBox, #colorBox, #status, .clock-box, .modal-card {
+    background: white;
+    color: black;
+    border-radius: 10px;
+}
+#roomBox, #colorBox {
+    font-size: 16px;
+    padding: 10px 14px;
+}
+#status {
+    font-size: 20px;
+    font-weight: bold;
+    padding: 10px 18px;
+    min-width: 220px;
+    text-align: center;
+    margin-bottom: 16px;
+}
+button, input {
+    font-size: 16px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: none;
+}
+#gameArea {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    width: 100%;
+}
+#leftSpacer {
+    width: 130px;
+    min-width: 130px;
+    height: 564px;
+    visibility: hidden;
+}
+#boardWrap {
+    position: relative;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+}
+#board {
+    display: grid;
+    grid-template-columns: repeat(8, 70px);
+    grid-template-rows: repeat(8, 70px);
+    width: 560px;
+    height: 560px;
+    border: 2px solid white;
+    box-sizing: content-box;
+}
+#clockPanel {
+    height: 564px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    min-width: 130px;
+    width: 130px;
+}
+.clock-box {
+    font-size: 20px;
+    font-weight: bold;
+    padding: 12px 16px;
+    min-width: 110px;
+    text-align: center;
+}
+.cell {
+    width: 70px;
+    height: 70px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+}
+.white { background: #f0d9b5; }
+.black { background: #b58863; }
+.selected { box-shadow: inset 0 0 0 4px red; }
+.move-dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: rgba(0, 255, 0, 0.85);
+    position: absolute;
+}
+.capture-ring {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    border: 4px solid orange;
+    box-sizing: border-box;
+    position: absolute;
+}
+.check-king {
+    width: 58px;
+    height: 58px;
+    border-radius: 50%;
+    background: rgba(255, 0, 0, 0.45);
+    position: absolute;
+    z-index: 1;
+}
+.winner-king {
+    width: 58px;
+    height: 58px;
+    border-radius: 50%;
+    background: rgba(144, 238, 144, 0.8);
+    position: absolute;
+    z-index: 1;
+}
+img {
+    width: 52px;
+    height: 52px;
+    pointer-events: none;
+    position: relative;
+    z-index: 2;
+    -webkit-user-drag: none;
+    user-select: none;
+}
+#gameOverModal {
+    position: absolute;
+    inset: 0;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.45);
+}
+#gameOverModal.show {
+    display: flex;
+}
+.modal-card {
+    padding: 20px 24px;
+    min-width: 240px;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+#modalTitle {
+    font-size: 24px;
+    font-weight: bold;
+    margin-bottom: 16px;
+}
+.modal-actions {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+}
+.modal-actions button {
+    min-width: 96px;
+}
+@media (max-width: 900px) {
+    #gameArea {
+        flex-direction: column;
+        align-items: center;
+    }
+    #leftSpacer {
+        display: none;
+    }
+    #clockPanel {
+        height: auto;
+        width: 100%;
+        min-width: 0;
+        flex-direction: row;
+        justify-content: center;
+        gap: 12px;
+    }
+    #board {
+        grid-template-columns: repeat(8, min(11vw, 56px));
+        grid-template-rows: repeat(8, min(11vw, 56px));
+        width: auto;
+        height: auto;
+    }
+    .cell {
+        width: min(11vw, 56px);
+        height: min(11vw, 56px);
+    }
+    img {
+        width: min(8vw, 42px);
+        height: min(8vw, 42px);
+    }
+}
+</style>
+</head>
+<body>
+<div id="topbar">
+    <button onclick="createRoom()">방 만들기</button>
+    <input id="roomInput" placeholder="방 코드 입력">
+    <button onclick="joinRoom()">방 참가</button>
+    <div id="roomBox">방: 없음</div>
+    <div id="colorBox">내 색: 없음</div>
+</div>
+<div id="status">방을 만들거나 참가해</div>
+<div id="gameArea">
+    <div id="leftSpacer"></div>
+    <div id="boardWrap">
+        <div id="board"></div>
+        <div id="gameOverModal">
+            <div class="modal-card">
+                <div id="modalTitle">게임 종료</div>
+                <div class="modal-actions">
+                    <button onclick="resetGame()">재대결</button>
+                    <button onclick="leaveRoom()">나가기</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="clockPanel">
+        <div id="topClock" class="clock-box">흑 600s</div>
+        <div id="bottomClock" class="clock-box">백 600s</div>
+    </div>
+</div>
+<script>
+const API_BASE = "";
+let selected = null;
+let currentBoard = null;
+let currentState = null;
+let roomId = null;
+let playerId = null;
+let myColor = null;
+let gameEnded = false;
+let socket = null;
+
+function connectSocket() {
+    if (!roomId) return;
+    if (socket) {
+        socket.onclose = null;
+        socket.close();
+    }
+    const wsProtocol = location.protocol === "https:" ? "wss" : "ws";
+    socket = new WebSocket(`${wsProtocol}://${location.host}/ws/${roomId}`);
+
+    socket.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        if (data.type === "update") renderBoardFromState(data.state);
+    };
+
+    socket.onclose = () => {
+        if (!roomId) return;
+        setTimeout(connectSocket, 1000);
+    };
+}
+
+function displayToBoard(x, y) {
+    if (myColor === "B") return { x: 7 - x, y: 7 - y };
+    return { x, y };
+}
+
+function ensurePlayerId() {
+    let saved = sessionStorage.getItem("augment_chess_player_id");
+    if (!saved) {
+        saved = crypto.randomUUID();
+        sessionStorage.setItem("augment_chess_player_id", saved);
+    }
+    playerId = saved;
+}
+
+function getRoomFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("room");
+}
+
+function setRoomToUrl(newRoomId) {
+    const url = new URL(window.location.href);
+    if (newRoomId) url.searchParams.set("room", newRoomId);
+    else url.searchParams.delete("room");
+    window.history.replaceState({}, "", url);
+}
+
+function updateRoomBox() {
+    document.getElementById("roomBox").innerText = roomId ? `방: ${roomId}` : "방: 없음";
+}
+
+function updateColorBox() {
+    let text = "내 색: 없음";
+    if (myColor === "W") text = "내 색: 백";
+    if (myColor === "B") text = "내 색: 흑";
+    if (myColor === "S") text = "내 색: 관전";
+    document.getElementById("colorBox").innerText = text;
+}
+
+function setClockUI(clock) {
+    if (!clock) return;
+    const w = Math.max(0, Math.floor(clock.W));
+    const b = Math.max(0, Math.floor(clock.B));
+    document.getElementById("topClock").innerText = `흑 ${b}s`;
+    document.getElementById("bottomClock").innerText = `백 ${w}s`;
+}
+
+function showGameOverModal(text) {
+    document.getElementById("modalTitle").innerText = text;
+    document.getElementById("gameOverModal").classList.add("show");
+}
+
+function hideGameOverModal() {
+    document.getElementById("gameOverModal").classList.remove("show");
+}
+
+function setStatusUI(data) {
+    const status = document.getElementById("status");
+    const gameState = data.game_state;
+    let text = "";
+    let endedNow = false;
+
+    if (data.clock?.ended) {
+        endedNow = true;
+        text = `${data.clock.winner === "W" ? "백" : "흑"} 시간 승리`;
+    } else if (gameState.checkmate) {
+        endedNow = true;
+        text = data.winner === "W" ? "백 승리" : "흑 승리";
+    } else if (gameState.draw) {
+        endedNow = true;
+        if (gameState.draw_reason === "stalemate") text = "스테일메이트";
+        else if (gameState.draw_reason === "fifty_move") text = "50수 무승부";
+        else if (gameState.draw_reason === "threefold_repetition") text = "3수 동형";
+        else if (gameState.draw_reason === "insufficient_material") text = "기물 부족 무승부";
+        else text = "무승부";
+    } else if (gameState.check) {
+        text = data.turn === "W" ? "백 체크" : "흑 체크";
+    } else {
+        text = data.turn === "W" ? "백 턴" : "흑 턴";
+    }
+
+    gameEnded = endedNow;
+    if (gameEnded || data.turn !== myColor) selected = null;
+    status.innerText = text;
+    if (gameEnded) showGameOverModal(text);
+    else hideGameOverModal();
+}
+
+function renderEmptyBoard() {
+    const boardDiv = document.getElementById("board");
+    boardDiv.innerHTML = "";
+    for (let y = 0; y < 8; y++) {
+        for (let x = 0; x < 8; x++) {
+            const cell = document.createElement("div");
+            cell.className = "cell " + (((x + y) % 2 === 0) ? "white" : "black");
+            boardDiv.appendChild(cell);
+        }
+    }
+    hideGameOverModal();
+}
+
+async function createRoom() {
+    const res = await fetch(`${API_BASE}/create_room`, { method: "POST" });
+    const data = await res.json();
+    roomId = data.room_id;
+    setRoomToUrl(roomId);
+    updateRoomBox();
+    await joinCurrentRoom();
+    await loadBoard();
+    connectSocket();
+}
+
+async function joinRoom() {
+    const input = document.getElementById("roomInput").value.trim().toUpperCase();
+    if (!input) return;
+    roomId = input;
+    setRoomToUrl(roomId);
+    updateRoomBox();
+    await joinCurrentRoom();
+    await loadBoard();
+    connectSocket();
+}
+
+async function joinCurrentRoom() {
+    if (!roomId) return;
+    const res = await fetch(`${API_BASE}/rooms/${roomId}/join`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ player_id: playerId })
+    });
+
+    if (!res.ok) {
+        myColor = null;
+        updateColorBox();
+        return;
+    }
+
+    const data = await res.json();
+    myColor = data.color;
+    updateColorBox();
+}
+
+function renderBoardFromState(data) {
+    currentState = data;
+    currentBoard = data.board;
+    setClockUI(data.clock);
+    setStatusUI(data);
+
+    const boardDiv = document.getElementById("board");
+    boardDiv.innerHTML = "";
+    const gameState = currentState.game_state;
+    const checkedColor = gameState.check ? data.turn : null;
+    const winnerColor = gameState.checkmate ? data.winner : null;
+
+    for (let displayY = 0; displayY < 8; displayY++) {
+        for (let displayX = 0; displayX < 8; displayX++) {
+            const pos = displayToBoard(displayX, displayY);
+            const x = pos.x;
+            const y = pos.y;
+            const cell = document.createElement("div");
+            cell.className = "cell " + (((displayX + displayY) % 2 === 0) ? "white" : "black");
+            cell.onclick = () => handleClick(x, y);
+
+            const piece = currentBoard[y][x];
+            if (selected && selected.x === x && selected.y === y) cell.classList.add("selected");
+
+            if (piece && piece.name === "K") {
+                if (checkedColor === piece.color) {
+                    const ring = document.createElement("div");
+                    ring.className = "check-king";
+                    cell.appendChild(ring);
+                }
+                if (winnerColor === piece.color) {
+                    const ring = document.createElement("div");
+                    ring.className = "winner-king";
+                    cell.appendChild(ring);
+                }
+            }
+
+            if (selected && isPossibleMove(selected.x, selected.y, x, y)) {
+                const selectedPiece = currentBoard[selected.y][selected.x];
+                const target = currentBoard[y][x];
+                const isPawnEp = selectedPiece && selectedPiece.name === "P" && x !== selected.x && !target;
+                if ((target && selectedPiece && target.color !== selectedPiece.color) || isPawnEp) {
+                    const ring = document.createElement("div");
+                    ring.className = "capture-ring";
+                    cell.appendChild(ring);
+                } else {
+                    const dot = document.createElement("div");
+                    dot.className = "move-dot";
+                    cell.appendChild(dot);
+                }
+            }
+
+            if (piece) {
+                const img = document.createElement("img");
+                img.src = `pieces/${piece.color.toLowerCase()}${piece.name.toLowerCase()}.png`;
+                img.draggable = false;
+                img.ondragstart = () => false;
+                cell.appendChild(img);
+            }
+            boardDiv.appendChild(cell);
+        }
+    }
+}
+
+async function loadBoard() {
+    if (!roomId) {
+        renderEmptyBoard();
+        return;
+    }
+    try {
+        const res = await fetch(`${API_BASE}/rooms/${roomId}/state`);
+        if (!res.ok) return;
+        const data = await res.json();
+        renderBoardFromState(data);
+    } catch (err) {
+        console.error(err);
+    }
+}
+
+function handleClick(x, y) {
+    if (gameEnded || !roomId || !myColor || myColor === "S") return;
+    if (!currentState || !currentBoard) return;
+    if (myColor !== currentState.turn) return;
+
+    const piece = currentBoard[y][x];
+    if (selected === null) {
+        if (!piece || piece.color !== myColor) return;
+        selected = { x, y };
+        renderBoardFromState(currentState);
+        return;
+    }
+
+    if (piece && piece.color === myColor) {
+        selected = { x, y };
+        renderBoardFromState(currentState);
+        return;
+    }
+
+    movePiece(selected.x, selected.y, x, y);
+}
+
+async function movePiece(x1, y1, x2, y2) {
+    if (gameEnded || !roomId || !myColor || myColor === "S") return;
+    try {
+        const res = await fetch(`${API_BASE}/rooms/${roomId}/move`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ x1, y1, x2, y2, player_id: playerId })
+        });
+        const data = await res.json();
+
+        if (data.result && data.result.success) {
+            selected = null;
+            return;
+        }
+
+        if (data.result && data.result.message) {
+            const status = document.getElementById("status");
+            if (status) status.innerText = data.result.message;
+        }
+    } catch (err) {
+        console.error(err);
+    }
+}
+
+function isPossibleMove(x1, y1, x2, y2) {
+    const piece = currentBoard[y1]?.[x1];
+    const target = currentBoard[y2]?.[x2];
+    if (!piece) return false;
+    if (x1 === x2 && y1 === y2) return false;
+    if (target && target.color === piece.color) return false;
+
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const adx = Math.abs(dx);
+    const ady = Math.abs(dy);
+
+    if (piece.name === "P") {
+        const direction = piece.color === "W" ? -1 : 1;
+        const startRow = piece.color === "W" ? 6 : 1;
+        if (dx === 0 && dy === direction && !target) return true;
+        if (dx === 0 && y1 === startRow && dy === 2 * direction && !target && currentBoard[y1 + direction][x1] === null) return true;
+        if (adx === 1 && dy === direction && target && target.color !== piece.color) return true;
+        if (adx === 1 && dy === direction && !target && currentState?.last_move) {
+            const [lx1, ly1, lx2, ly2] = currentState.last_move;
+            const moved = currentBoard[ly2]?.[lx2];
+            if (moved && moved.name === "P" && moved.color !== piece.color && Math.abs(ly2 - ly1) === 2 && ly2 === y1 && lx2 === x2) return true;
+        }
+        return false;
+    }
+    if (piece.name === "N") return (adx === 2 && ady === 1) || (adx === 1 && ady === 2);
+    if (piece.name === "K") {
+        if (adx <= 1 && ady <= 1) return true;
+        if (ady === 0 && adx === 2) return true;
+        return false;
+    }
+    if (piece.name === "R") {
+        if (x1 !== x2 && y1 !== y2) return false;
+        return isPathClear(x1, y1, x2, y2);
+    }
+    if (piece.name === "B") {
+        if (adx !== ady) return false;
+        return isPathClear(x1, y1, x2, y2);
+    }
+    if (piece.name === "Q") {
+        if (x1 === x2 || y1 === y2 || adx === ady) return isPathClear(x1, y1, x2, y2);
+        return false;
+    }
+    return false;
+}
+
+function isPathClear(x1, y1, x2, y2) {
+    const stepX = x2 === x1 ? 0 : (x2 > x1 ? 1 : -1);
+    const stepY = y2 === y1 ? 0 : (y2 > y1 ? 1 : -1);
+    let x = x1 + stepX;
+    let y = y1 + stepY;
+    while (x !== x2 || y !== y2) {
+        if (currentBoard[y][x] !== null) return false;
+        x += stepX;
+        y += stepY;
+    }
+    return true;
+}
+
+async function resetGame() {
+    if (!roomId) return;
+    await fetch(`${API_BASE}/rooms/${roomId}/reset`, { method: "POST" });
+    selected = null;
+    gameEnded = false;
+    hideGameOverModal();
+    await joinCurrentRoom();
+    await loadBoard();
+}
+
+function leaveRoom() {
+    roomId = null;
+    myColor = null;
+    currentBoard = null;
+    currentState = null;
+    selected = null;
+    gameEnded = false;
+    setRoomToUrl(null);
+    updateRoomBox();
+    updateColorBox();
+    document.getElementById("status").innerText = "방을 만들거나 참가해";
+    document.getElementById("roomInput").value = "";
+    setClockUI({ W: 600, B: 600 });
+    hideGameOverModal();
+    renderEmptyBoard();
+    if (socket) {
+        socket.onclose = null;
+        socket.close();
+        socket = null;
+    }
+}
+
+ensurePlayerId();
+renderEmptyBoard();
+roomId = getRoomFromUrl();
+updateRoomBox();
+updateColorBox();
+if (roomId) {
+    joinCurrentRoom().then(() => {
+        loadBoard();
+        connectSocket();
+    });
+}
+</script>
+</body>
+</html>
