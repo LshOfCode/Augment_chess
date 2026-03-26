@@ -64,19 +64,6 @@ class Board:
             return {"success": False, "message": "턴 아님"}
         if (x1, y1) == (x2, y2):
             return {"success": False, "message": "같은 칸으로 이동 불가"}
-        piece = self.grid[y1][x1]
-
-        if piece and piece.name == "P":
-            if abs(y2 - y1) == 2:  # 2칸 전진 시도
-                weaken_count = self.effects[piece.color].get("pawn_weaken", 0)
-                if weaken_count > 0:
-                    # 카운트 감소
-                    self.effects[piece.color]["pawn_weaken"] -= 1
-
-                    return {
-                        "success": False,
-                        "message": "폰 약화: 2칸 전진 불가"
-                    }
 
         legal_moves = self.get_legal_moves(x1, y1)
         if (x2, y2) not in legal_moves:
@@ -86,7 +73,27 @@ class Board:
         if promotion not in {"Q", "R", "B", "N"}:
             promotion = "Q"
 
+        consume_pawn_weaken = False
+
+        if piece.name == "P":
+            start_row = 6 if piece.color == "W" else 1
+            weaken_count = self.effects[piece.color].get("pawn_weaken", 0)
+
+            if y1 == start_row and weaken_count > 0:
+                if x1 == x2 and abs(y2 - y1) == 2:
+                    return {
+                        "success": False,
+                        "message": "폰 약화: 처음 2개의 폰은 2칸 전진 불가"
+                    }
+                consume_pawn_weaken = True
+
         self._apply_move(x1, y1, x2, y2, promotion)
+
+        if consume_pawn_weaken:
+            self.effects[piece.color]["pawn_weaken"] -= 1
+            if self.effects[piece.color]["pawn_weaken"] <= 0:
+                self.effects[piece.color].pop("pawn_weaken", None)
+
         self.turn = "B" if self.turn == "W" else "W"
         if self.turn == "W":
             self.fullmove_number += 1
