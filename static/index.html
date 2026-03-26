@@ -63,7 +63,9 @@ button, input {
     display: inline-flex;
     justify-content: center;
     align-items: center;
+    isolation: isolate;
 }
+
 #board {
     display: grid;
     grid-template-columns: repeat(8, 70px);
@@ -72,6 +74,8 @@ button, input {
     height: 560px;
     border: 2px solid white;
     box-sizing: content-box;
+    position: relative;
+    z-index: 1;
 }
 #clockPanel {
     height: 564px;
@@ -147,6 +151,7 @@ img {
     justify-content: center;
     align-items: center;
     background: rgba(0, 0, 0, 0.45);
+    z-index: 100;
 }
 #gameOverModal.show {
     display: flex;
@@ -156,6 +161,8 @@ img {
     min-width: 240px;
     text-align: center;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+    position: relative;
+    z-index: 101;
 }
 #modalTitle {
     font-size: 24px;
@@ -220,9 +227,9 @@ img {
             <div class="modal-card">
                 <div id="modalTitle">게임 종료</div>
                 <div class="modal-actions">
-                    <button onclick="resetGame()">재대결</button>
-                    <button onclick="leaveRoom()">나가기</button>
-                </div>
+    <button id="rematchBtn" onclick="requestRematch()">재대결 (0/2)</button>
+    <button onclick="leaveRoom()">나가기</button>
+</div>
             </div>
         </div>
     </div>
@@ -243,6 +250,27 @@ let gameEnded = false;
 let socket = null;
 let clockTicker = null;
 
+function updateRematchButton(rematch) {
+    const btn = document.getElementById("rematchBtn");
+    if (!btn) return;
+
+    const count = Number(rematch?.count ?? 0);
+    btn.innerText = `재대결 (${count}/2)`;
+
+    if (!gameEnded) {
+        btn.disabled = true;
+        return;
+    }
+
+    if (myColor !== "W" && myColor !== "B") {
+        btn.disabled = true;
+        return;
+    }
+
+    const voted = !!rematch?.votes?.[myColor];
+    btn.disabled = voted;
+}
+
 function connectSocket() {
     if (!roomId) return;
     if (socket) {
@@ -253,9 +281,11 @@ function connectSocket() {
     socket = new WebSocket(`${wsProtocol}://${location.host}/ws/${roomId}`);
 
     socket.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        if (data.type === "update") renderBoardFromState(data.state);
-    };
+    const data = JSON.parse(event.data);
+    if (data.type === "update" || data.type === "rematch_vote") {
+        renderBoardFromState(data.state);
+    }
+};
 
     socket.onclose = () => {
         if (!roomId) return;
@@ -454,6 +484,7 @@ function renderBoardFromState(data) {
 currentBoard = data.board;
 setStatusUI(data);
 setClockUI(data.clock);
+updateRematchButton(data.rematch);
 
 if (data.clock?.ended || gameEnded) stopClockTicker();
 else startClockTicker();
@@ -531,6 +562,19 @@ async function loadBoard() {
     }
 }
 
+function isPromotionMove(x1, y1, x2, y2) {
+    const piece = currentBoard?.[y1]?.[x1];
+    if (!piece || piece.name !== "P") return false;
+    return (piece.color === "W" && y2 === 0) || (piece.color === "B" && y2 === 7);
+}
+
+function askPromotionPiece() {
+    const input = prompt("프로모션 선택: Q, R, B, N", "Q");
+    const value = (input || "Q").trim().toUpperCase();
+    if (["Q", "R", "B", "N"].includes(value)) return value;
+    return "Q";
+}
+
 function handleClick(x, y) {
     if (gameEnded || !roomId || !myColor || myColor === "S") return;
     if (!currentState || !currentBoard) return;
@@ -555,12 +599,19 @@ function handleClick(x, y) {
 
 async function movePiece(x1, y1, x2, y2) {
     if (gameEnded || !roomId || !myColor || myColor === "S") return;
+
+    let promotion = "Q";
+    if (isPromotionMove(x1, y1, x2, y2)) {
+        promotion = askPromotionPiece();
+    }
+
     try {
         const res = await fetch(`${API_BASE}/rooms/${roomId}/move`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ x1, y1, x2, y2, player_id: playerId })
+            body: JSON.stringify({ x1, y1, x2, y2, player_id: playerId, promotion })
         });
+
         const data = await res.json();
 
         if (data.result && data.result.success) {
@@ -636,14 +687,33 @@ function isPathClear(x1, y1, x2, y2) {
     return true;
 }
 
-async function resetGame() {
-    if (!roomId) return;
-    stopClockTicker();
-    await fetch(`${API_BASE}/rooms/${roomId}/reset`, { method: "POST" });
-    selected = null;
-    gameEnded = false;
-    await joinCurrentRoom();
-    await loadBoard();
+async function requestRematch() {
+    if (!roomId || !playerId || !gameEnded) return;
+
+    try {
+        const res = await fetch(`${API_BASE}/rooms/${roomId}/rematch`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ player_id: playerId })
+        });
+
+        if (!res.ok) return;
+
+        const data = await res.json();
+
+        if (data.started) {
+            selected = null;
+            gameEnded = false;
+            await joinCurrentRoom();
+            updateColorBox();
+        }
+
+        if (data.state) {
+            renderBoardFromState(data.state);
+        }
+    } catch (err) {
+        console.error(err);
+    }
 }
 
 function leaveRoom() {

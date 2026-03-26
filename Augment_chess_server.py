@@ -39,12 +39,17 @@ def create_room_data():
             "ended": False,
             "winner": None,
         },
+        "rematch": {
+            "votes": {"W": False, "B": False},
+            "count": 0,
+        },
     }
 
 
 def build_state(room):
     data = room["board"].to_dict()
     data["clock"] = room["time"]
+    data["rematch"] = room["rematch"]
     return data
 
 
@@ -171,6 +176,7 @@ async def move(room_id: str, data: dict = Body(...)):
         }
 
     x1, y1, x2, y2 = data["x1"], data["y1"], data["x2"], data["y2"]
+    promotion = data.get("promotion", "Q")
     piece = board.grid[y1][x1]
     if piece is None:
         return {
@@ -184,7 +190,7 @@ async def move(room_id: str, data: dict = Body(...)):
             "state": build_state(room),
         }
 
-    result = board.move_piece_web(x1, y1, x2, y2)
+    result = board.move_piece_web(x1, y1, x2, y2, promotion)
     if result["success"]:
         room["time"]["running"] = board.turn
         room["time"]["last_update"] = time.time()
@@ -240,3 +246,60 @@ async def broadcast(room_id: str, message: dict):
 
     for ws in dead:
         connections[room_id].remove(ws)
+
+def reset_room_with_swap(room_id: str):
+    old_room = rooms[room_id]
+    old_players = old_room["players"]
+
+    new_room = create_room_data()
+    new_room["players"] = {
+        "W": old_players["B"],
+        "B": old_players["W"],
+    }
+
+    if new_room["players"]["W"] is not None and new_room["players"]["B"] is not None:
+        new_room["time"]["last_update"] = time.time()
+        new_room["time"]["running"] = new_room["board"].turn
+
+    rooms[room_id] = new_room
+
+
+@app.post("/rooms/{room_id}/rematch")
+async def rematch_room(room_id: str, data: dict = Body(...)):
+    if room_id not in rooms:
+        raise HTTPException(status_code=404, detail="room not found")
+
+    player_id = data.get("player_id")
+    if not player_id:
+        raise HTTPException(status_code=400, detail="player_id required")
+
+    room = rooms[room_id]
+    players = room["players"]
+
+    if players["W"] == player_id:
+        player_color = "W"
+    elif players["B"] == player_id:
+        player_color = "B"
+    else:
+        raise HTTPException(status_code=403, detail="only players can request rematch")
+
+    rematch = room["rematch"]
+
+    if not rematch["votes"][player_color]:
+        rematch["votes"][player_color] = True
+        rematch["count"] += 1
+
+    await broadcast(room_id, {
+        "type": "rematch_vote",
+        "state": build_state(room)
+    })
+
+    if rematch["count"] >= 2:
+        reset_room_with_swap(room_id)
+        await broadcast(room_id, {
+            "type": "update",
+            "state": build_state(rooms[room_id])
+        })
+        return {"success": True, "started": True, "state": build_state(rooms[room_id])}
+
+    return {"success": True, "started": False, "state": build_state(room)}

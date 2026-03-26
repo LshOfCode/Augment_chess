@@ -41,7 +41,7 @@ class Board:
     def in_bounds(self, x: int, y: int) -> bool:
         return 0 <= x < 8 and 0 <= y < 8
 
-    def move_piece_web(self, x1: int, y1: int, x2: int, y2: int):
+    def move_piece_web(self, x1: int, y1: int, x2: int, y2: int, promotion: str = "Q"):
         if not all(isinstance(v, int) for v in [x1, y1, x2, y2]):
             return {"success": False, "message": "좌표 오류"}
         if not all(self.in_bounds(vx, vy) for vx, vy in [(x1, y1), (x2, y2)]):
@@ -59,7 +59,11 @@ class Board:
         if (x2, y2) not in legal_moves:
             return {"success": False, "message": "불가능한 이동"}
 
-        self._apply_move(x1, y1, x2, y2)
+        promotion = (promotion or "Q").upper()
+        if promotion not in {"Q", "R", "B", "N"}:
+            promotion = "Q"
+
+        self._apply_move(x1, y1, x2, y2, promotion)
         self.turn = "B" if self.turn == "W" else "W"
         if self.turn == "W":
             self.fullmove_number += 1
@@ -127,7 +131,10 @@ class Board:
         self.grid[y1][x1] = None
 
         if piece.name == "P" and ((piece.color == "W" and y2 == 0) or (piece.color == "B" and y2 == 7)):
-            self.grid[y2][x2] = Piece("Q", piece.color)
+            promotion = (promotion or "Q").upper()
+            if promotion not in {"Q", "R", "B", "N"}:
+                promotion = "Q"
+            self.grid[y2][x2] = Piece(promotion, piece.color)
 
         self.en_passant_target = None
         if piece.name == "P" and abs(y2 - y1) == 2:
@@ -250,15 +257,30 @@ class Board:
         piece = self.grid[y][x]
         if piece is None:
             return []
+
         moves = []
+
         for yy in range(8):
             for xx in range(8):
                 if not self.is_valid_move(x, y, xx, yy):
                     continue
-                temp = deepcopy(self)
-                temp._apply_move(x, y, xx, yy)
-                if not temp.is_in_check(piece.color):
-                    moves.append((xx, yy))
+
+                if piece.name == "P" and (yy == 0 or yy == 7):
+                    legal_promotion_found = False
+                    for promo in ("Q", "R", "B", "N"):
+                        temp = deepcopy(self)
+                        temp._apply_move(x, y, xx, yy, promo)
+                        if not temp.is_in_check(piece.color):
+                            legal_promotion_found = True
+                            break
+                    if legal_promotion_found:
+                        moves.append((xx, yy))
+                else:
+                    temp = deepcopy(self)
+                    temp._apply_move(x, y, xx, yy)
+                    if not temp.is_in_check(piece.color):
+                        moves.append((xx, yy))
+
         return moves
 
     def is_in_check(self, color: str) -> bool:
