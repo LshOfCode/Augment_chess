@@ -57,7 +57,8 @@ def create_room_data():
                 "W": None,
                 "B": None
             }
-        }
+        },
+        "move_count": 0
     }
 
 
@@ -241,8 +242,29 @@ async def move(room_id: str, data: dict = Body(...)):
 
     result = board.move_piece_web(x1, y1, x2, y2, promotion)
     if result["success"]:
-        room["time"]["running"] = board.turn
-        room["time"]["last_update"] = time.time()
+        room["move_count"] += 1
+
+        if room["move_count"] in (20, 40):
+            room["time"]["running"] = None
+            room["time"]["last_update"] = time.time()
+
+            room["augment"]["active"] = True
+            room["augment"]["selected"]["W"] = None
+            room["augment"]["selected"]["B"] = None
+
+            room["augment"]["choices"]["W"] = [
+                {"id": "a1", "tier": "gold", "title": "캐슬링 금지", "description": "..."},
+                {"id": "a2", "tier": "gold", "title": "언더 프로모션!!", "description": "..."},
+                {"id": "a3", "tier": "gold", "title": "폰 둔화", "description": "..."}
+            ]
+            room["augment"]["choices"]["B"] = [
+                {"id": "b1", "tier": "gold", "title": "룩 약화", "description": "..."},
+                {"id": "b2", "tier": "gold", "title": "비숍 약화", "description": "..."},
+                {"id": "b3", "tier": "gold", "title": "전장의 안개", "description": "..."}
+            ]
+        else:
+            room["time"]["running"] = board.turn
+            room["time"]["last_update"] = time.time()
 
         await broadcast(room_id, {
             "type": "update",
