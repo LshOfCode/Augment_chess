@@ -96,22 +96,6 @@ class Board:
     def _apply_move(self, x1: int, y1: int, x2: int, y2: int, promotion: str = "Q"):
         piece = self.grid[y1][x1]
         target = self.grid[y2][x2]
-        # 🔥 재정비 발동
-        if captured_piece is not None and captured_piece.name in {"B", "N"}:
-            owner = captured_piece.color
-            if self.effects[owner].get("reorganize", 0) > 0:
-                empty_cells = []
-
-                for yy in range(8):
-                    for xx in range(8):
-                        if self.grid[yy][xx] is None:
-                            empty_cells.append((xx, yy))
-
-                if empty_cells:
-                    spawn_x, spawn_y = random.choice(empty_cells)
-                    self.spawn_pawn(owner, spawn_x, spawn_y)
-
-                self.effects[owner]["reorganize"] -= 1
         if piece is None:
             return
 
@@ -127,6 +111,23 @@ class Board:
             capture_y = y2 + 1 if piece.color == "W" else y2 - 1
             captured_piece = self.grid[capture_y][x2]
             self.grid[capture_y][x2] = None
+
+        # 🔥 재정비 발동
+        if captured_piece is not None and captured_piece.name in {"B", "N"}:
+            owner = captured_piece.color
+            if self.effects[owner].get("reorganize", 0) > 0:
+                empty_cells = []
+
+                for yy in range(8):
+                    for xx in range(8):
+                        if self.grid[yy][xx] is None:
+                            empty_cells.append((xx, yy))
+
+                if empty_cells:
+                    spawn_x, spawn_y = random.choice(empty_cells)
+                    self.spawn_pawn(owner, spawn_x, spawn_y)
+
+                self.effects[owner]["reorganize"] -= 1   
 
         if piece.name == "K" and abs(x2 - x1) == 2:
             if x2 > x1:
