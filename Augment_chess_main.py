@@ -3,6 +3,7 @@ from __future__ import annotations
 from copy import deepcopy
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
+import random
 
 
 @dataclass
@@ -25,6 +26,10 @@ class Board:
             "W": {"left": False, "right": False},
             "B": {"left": False, "right": False},
         }
+        self.effects = {
+            "W": {},
+            "B": {}
+        }
         self.setup()
         self._record_position()
 
@@ -40,6 +45,11 @@ class Board:
 
     def in_bounds(self, x: int, y: int) -> bool:
         return 0 <= x < 8 and 0 <= y < 8
+    def spawn_pawn(self, color, x, y):
+        self.grid[y][x] = Piece("P", color)
+
+    def create_piece(self, piece_type, color):
+        return Piece(piece_type, color)
 
     def move_piece_web(self, x1: int, y1: int, x2: int, y2: int, promotion: str = "Q"):
         if not all(isinstance(v, int) for v in [x1, y1, x2, y2]):
@@ -54,6 +64,19 @@ class Board:
             return {"success": False, "message": "턴 아님"}
         if (x1, y1) == (x2, y2):
             return {"success": False, "message": "같은 칸으로 이동 불가"}
+        piece = self.grid[y1][x1]
+
+        if piece and piece.name == "P":
+            if abs(y2 - y1) == 2:  # 2칸 전진 시도
+                weaken_count = self.effects[piece.color].get("pawn_weaken", 0)
+                if weaken_count > 0:
+                    # 카운트 감소
+                    self.effects[piece.color]["pawn_weaken"] -= 1
+
+                    return {
+                        "success": False,
+                        "message": "폰 약화: 2칸 전진 불가"
+                    }
 
         legal_moves = self.get_legal_moves(x1, y1)
         if (x2, y2) not in legal_moves:
@@ -73,6 +96,22 @@ class Board:
     def _apply_move(self, x1: int, y1: int, x2: int, y2: int, promotion: str = "Q"):
         piece = self.grid[y1][x1]
         target = self.grid[y2][x2]
+        # 🔥 재정비 발동
+        if captured_piece is not None and captured_piece.name in {"B", "N"}:
+            owner = captured_piece.color
+            if self.effects[owner].get("reorganize", 0) > 0:
+                empty_cells = []
+
+                for yy in range(8):
+                    for xx in range(8):
+                        if self.grid[yy][xx] is None:
+                            empty_cells.append((xx, yy))
+
+                if empty_cells:
+                    spawn_x, spawn_y = random.choice(empty_cells)
+                    self.spawn_pawn(owner, spawn_x, spawn_y)
+
+                self.effects[owner]["reorganize"] -= 1
         if piece is None:
             return
 
@@ -171,6 +210,9 @@ class Board:
 
             if dx == 0 and dy == direction and target is None:
                 return True
+            if self.effects[piece.color].get("pawn_retreat"):
+                if dx == 0 and dy == -direction and target is None:
+                    return True
 
             if (
                 dx == 0
@@ -222,6 +264,8 @@ class Board:
         return True
 
     def _can_castle(self, color: str, x1: int, y1: int, x2: int) -> bool:
+        if self.effects[color].get("no_castling"):
+            return False
         row = 7 if color == "W" else 0
         if (x1, y1) != (4, row):
             return False

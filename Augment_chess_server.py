@@ -10,6 +10,8 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from Augment_chess_main import Board
+from Augment_chess_main import Board
+from Augment_silver import SILVER_AUGMENTS
 
 BASE_DIR = Path(__file__).resolve().parent
 STATIC_DIR = BASE_DIR / "static"
@@ -104,6 +106,11 @@ def get_player_color(room, player_id):
         return "B"
     return None
 
+def find_augment_by_id(augment_id: str):
+    for augment in SILVER_AUGMENTS:
+        if augment["id"] == augment_id:
+            return augment
+    return None
 
 @app.get("/")
 def index():
@@ -154,15 +161,11 @@ async def join_room(room_id: str, data: dict = Body(...)):
         room["augment"]["active"] = True
 
         room["augment"]["choices"]["W"] = [
-            {"id": "a1", "tier": "gold", "title": "캐슬링 금지", "description": "..."},
-            {"id": "a2", "tier": "gold", "title": "언더 프로모션!!", "description": "..."},
-            {"id": "a3", "tier": "gold", "title": "폰 둔화", "description": "..."}
+            {"id": "pawn_weaken", "tier": "silver", "title": "폰 약화", "description": "..."}
         ]
 
         room["augment"]["choices"]["B"] = [
-            {"id": "b1", "tier": "gold", "title": "룩 약화", "description": "..."},
-            {"id": "b2", "tier": "gold", "title": "비숍 약화", "description": "..."},
-            {"id": "b3", "tier": "gold", "title": "전장의 안개", "description": "..."}
+            {"id": "pawn_weaken", "tier": "silver", "title": "폰 약화", "description": "..."}
         ]
 
         await broadcast(room_id, {
@@ -399,6 +402,14 @@ async def select_augment(room_id: str, req: AugmentSelectRequest):
     )
 
     if both_done:
+        board = room["board"]
+
+        for apply_color in ["W", "B"]:
+            augment_id = room["augment"]["selected"][apply_color]
+            augment = find_augment_by_id(augment_id)
+
+            if augment is not None:
+                augment["apply"](board, apply_color)
         room["augment"]["active"] = False
         room["time"]["last_update"] = time.time()
         room["time"]["running"] = room["board"].turn
