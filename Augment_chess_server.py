@@ -161,11 +161,15 @@ async def join_room(room_id: str, data: dict = Body(...)):
         room["augment"]["active"] = True
 
         room["augment"]["choices"]["W"] = [
-            {"id": "pawn_weaken", "tier": "silver", "title": "폰 약화", "description": "..."}
+            {"id": "bishop_to_knight", "tier": "silver", "title": "몽골리안 갬빗", "description": "자신의 모든 비숍이 나이트로 전환됩니다."},
+            {"id": "pawn_supply", "tier": "silver", "title": "폰 공급", "description": "자신의 뒤에서 세 번째 줄에서 빈칸 하나를 골라 폰을 생성합니다."},
+            {"id": "pawn_retreat", "tier": "silver", "title": "후퇴하라!", "description": "자신의 모든 폰이 1칸 뒤로 이동할 수 있습니다.(잡기는 불가능)"}
         ]
 
         room["augment"]["choices"]["B"] = [
-            {"id": "pawn_weaken", "tier": "silver", "title": "폰 약화", "description": "..."}
+            {"id": "bishop_to_knight", "tier": "silver", "title": "몽골리안 갬빗", "description": "자신의 모든 비숍이 나이트로 전환됩니다."},
+            {"id": "pawn_supply", "tier": "silver", "title": "폰 공급", "description": "자신의 뒤에서 세 번째 줄에서 빈칸 하나를 골라 폰을 생성합니다."},
+            {"id": "pawn_retreat", "tier": "silver", "title": "후퇴하라!", "description": "자신의 모든 폰이 1칸 뒤로 이동할 수 있습니다.(잡기는 불가능)"}
         ]
 
         await broadcast(room_id, {
