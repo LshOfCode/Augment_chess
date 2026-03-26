@@ -1230,7 +1230,7 @@
                     const direction = piece.color === "W" ? -1 : 1;
                     const startRow = piece.color === "W" ? 6 : 1;
                     const hasPawnRetreat = !!currentState?.effects?.[piece.color]?.pawn_retreat;
-                    const weakenCount = Number(currentState?.effects?.[piece.color]?.pawn_weaken ?? 0);
+                    const weakenCount = Number(currentState?.effects?.[piece.color]?.pawn_slow ?? 0);
 
                     if (dx === 0 && dy === direction && !target) return true;
 
@@ -1243,7 +1243,7 @@
                         !target &&
                         currentBoard[y1 + direction][x1] === null
                     ) {
-                        if (weakenCount > 0) return false;
+                        if (slowCount > 0) return false;
                         return true;
                     }
 
