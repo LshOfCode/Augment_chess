@@ -374,16 +374,17 @@ async def select_augment(room_id: str, req: AugmentSelectRequest):
     both_done = (
         room["augment"]["selected"]["W"] is not None and
         room["augment"]["selected"]["B"] is not None
-        await broadcast(room_id, {
-            "type": "update",
-            "state": build_state(room)
-        })
     )
 
     if both_done:
         room["augment"]["active"] = False
         room["time"]["last_update"] = time.time()
         room["time"]["running"] = room["board"].turn
+
+        await broadcast(room_id, {
+            "type": "update",
+            "state": build_state(room)
+        })
 
     return {
         "both_done": both_done,

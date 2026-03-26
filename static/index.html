@@ -1210,6 +1210,8 @@ async function requestRematch() {
             gameEnded = false;
             await joinCurrentRoom();
             updateColorBox();
+            augmentShownThisGame = false;
+hideAugmentOverlay();
         }
 
         if (data.state) {
