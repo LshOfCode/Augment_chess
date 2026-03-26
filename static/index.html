@@ -6,8 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Augment_Chess</title>
     <style>
-        #topbar,
-#roomBox,
+#topbar,
 #colorBox,
 #status,
 #gameArea,
@@ -20,6 +19,10 @@ button {
     -webkit-user-select: none;
     user-select: none;
     -webkit-user-drag: none;
+}
+#roomBox {
+    -webkit-user-select: text;
+    user-select: text;
 }
         body {
             display: flex;
@@ -1648,8 +1651,21 @@ button {
 
             /* ===== init ===== */
             document.addEventListener("dragstart", (e) => {
-    e.preventDefault();
+    if (e.target.tagName === "IMG") {
+        e.preventDefault();
+    }
 });
+
+    const roomInputEl = document.getElementById("roomInput");
+if (roomInputEl) {
+    roomInputEl.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            joinRoom();
+        }
+    });
+}
+
             ensurePlayerId();
             renderEmptyBoard();
             setClockUI({

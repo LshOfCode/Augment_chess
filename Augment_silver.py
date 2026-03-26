@@ -10,23 +10,16 @@ def apply_no_castling(game, player):
 
 
 def apply_pawn_supply(game, player):
-    direction = -1 if player == "W" else 1
+    row = 5 if player == "W" else 2
 
-    candidates = []
+    empty_cells = []
+    for x in range(8):
+        if game.grid[row][x] is None:
+            empty_cells.append((x, row))
 
-    for y in range(8):
-        for x in range(8):
-            piece = game.grid[y][x]
-
-            if piece and piece.color == player and piece.name == "P":
-                ny = y + direction
-                if 0 <= ny < 8 and game.grid[ny][x] is None:
-                    candidates.append((x, ny))
-
-    if candidates:
-        spawn_x, spawn_y = random.choice(candidates)
+    if empty_cells:
+        spawn_x, spawn_y = random.choice(empty_cells)
         game.spawn_pawn(player, spawn_x, spawn_y)
-
 
 def apply_pawn_weaken(game, player):
     enemy = 'B' if player == 'W' else 'W'
@@ -67,8 +60,8 @@ SILVER_AUGMENTS = [
 
     {
         "id": "pawn_supply",
-        "name": "폰 공급",
-        "desc": "자신의 뒤에서 세 번째 줄에서 빈칸 하나를 골라 폰을 생성합니다.",
+        "name": "폰 보급",
+        "desc": "자신의 폰 앞 열중 한 칸을 골라 폰을 생성합니다.",
         "tier": "silver",
         "timing": "start",
         "icon": "Augment_icon/Augment_pawn_supply.png",
@@ -78,7 +71,7 @@ SILVER_AUGMENTS = [
     {
         "id": "pawn_weaken",
         "name": "폰 약화",
-        "desc": "상대의 처음 2개 폰은 2칸 전진이 불가능합니다.",
+        "desc": "상대의 처음 2개의 기본 폰은 2칸 전진이 불가능합니다.",
         "tier": "silver",
         "timing": "start",
         "icon": "Augment_icon/Augment_pawn_weaken.png",
