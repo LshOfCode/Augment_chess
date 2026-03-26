@@ -487,4 +487,5 @@ class Board:
             "game_state": self.get_game_state(),
             "last_move": self.last_move,
             "winner": self.get_game_state().get("winner"),
+            "effects": self.effects,
         }

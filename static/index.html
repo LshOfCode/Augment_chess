@@ -1206,6 +1206,8 @@
                     const startRow = piece.color === "W" ? 6 : 1;
 
                     if (dx === 0 && dy === direction && !target) return true;
+                    const hasPawnRetreat = !!currentState?.effects?.[piece.color]?.pawn_retreat;
+                    if (hasPawnRetreat && dx === 0 && dy === -direction && !target) return true;
 
                     if (
                         dx === 0 &&

@@ -161,15 +161,45 @@ async def join_room(room_id: str, data: dict = Body(...)):
         room["augment"]["active"] = True
 
         room["augment"]["choices"]["W"] = [
-            {"id": "bishop_to_knight", "tier": "silver", "title": "몽골리안 갬빗", "description": "자신의 모든 비숍이 나이트로 전환됩니다."},
-            {"id": "pawn_supply", "tier": "silver", "title": "폰 공급", "description": "자신의 뒤에서 세 번째 줄에서 빈칸 하나를 골라 폰을 생성합니다."},
-            {"id": "pawn_retreat", "tier": "silver", "title": "후퇴하라!", "description": "자신의 모든 폰이 1칸 뒤로 이동할 수 있습니다.(잡기는 불가능)"}
+            {
+                "id": "bishop_to_knight",
+                "tier": "silver",
+                "title": "몽골리안 갬빗",
+                "description": "자신의 모든 비숍이 나이트로 전환됩니다."
+            },
+            {
+                "id": "pawn_supply",
+                "tier": "silver",
+                "title": "폰 공급",
+                "description": "자신의 뒤에서 세 번째 줄에서 빈칸 하나를 골라 폰을 생성합니다."
+            },
+            {
+                "id": "pawn_retreat",
+                "tier": "silver",
+                "title": "후퇴하라!",
+                "description": "자신의 모든 폰이 1칸 뒤로 이동할 수 있습니다.(잡기는 불가능)"
+            }
         ]
 
         room["augment"]["choices"]["B"] = [
-            {"id": "bishop_to_knight", "tier": "silver", "title": "몽골리안 갬빗", "description": "자신의 모든 비숍이 나이트로 전환됩니다."},
-            {"id": "pawn_supply", "tier": "silver", "title": "폰 공급", "description": "자신의 뒤에서 세 번째 줄에서 빈칸 하나를 골라 폰을 생성합니다."},
-            {"id": "pawn_retreat", "tier": "silver", "title": "후퇴하라!", "description": "자신의 모든 폰이 1칸 뒤로 이동할 수 있습니다.(잡기는 불가능)"}
+            {
+                "id": "no_castling",
+                "tier": "silver",
+                "title": "캐슬링 금지",
+                "description": "상대의 캐슬링을 금지시킵니다."
+            },
+            {
+                "id": "pawn_weaken",
+                "tier": "silver",
+                "title": "폰 약화",
+                "description": "상대의 처음 2번 2칸 전진 시도는 불가능합니다."
+            },
+            {
+                "id": "reorganize",
+                "tier": "silver",
+                "title": "재정비",
+                "description": "자신의 비숍 또는 나이트가 잡히면 무작위 빈칸에 폰을 하나 생성합니다.(1회 한정)"
+            }
         ]
 
         await broadcast(room_id, {
