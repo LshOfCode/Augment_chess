@@ -241,6 +241,7 @@ let playerId = null;
 let myColor = null;
 let gameEnded = false;
 let socket = null;
+let clockTicker = null;
 
 function connectSocket() {
     if (!roomId) return;
@@ -300,12 +301,59 @@ function updateColorBox() {
     document.getElementById("colorBox").innerText = text;
 }
 
+function formatTime(sec) {
+    sec = Math.max(0, Math.floor(sec));
+
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+
+    return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
 function setClockUI(clock) {
     if (!clock) return;
-    const w = Math.max(0, Math.floor(clock.W));
-    const b = Math.max(0, Math.floor(clock.B));
-    document.getElementById("topClock").innerText = `흑 ${b}s`;
-    document.getElementById("bottomClock").innerText = `백 ${w}s`;
+
+    let w = Number(clock.W ?? 0);
+    let b = Number(clock.B ?? 0);
+
+    if (!clock.ended && clock.running && clock.last_update) {
+        const now = Date.now() / 1000;
+        const elapsed = Math.max(0, now - Number(clock.last_update));
+
+        if (clock.running === "W") w -= elapsed;
+        if (clock.running === "B") b -= elapsed;
+    }
+
+    w = Math.max(0, w);
+    b = Math.max(0, b);
+
+    document.getElementById("topClock").innerText = `흑 ${formatTime(b)}`;
+document.getElementById("bottomClock").innerText = `백 ${formatTime(w)}`;
+}
+
+const top = document.getElementById("topClock");
+const bottom = document.getElementById("bottomClock");
+
+top.innerText = `흑 ${formatTime(b)}`;
+bottom.innerText = `백 ${formatTime(w)}`;
+
+top.style.color = b <= 10 ? "red" : "black";
+bottom.style.color = w <= 10 ? "red" : "black";
+
+function startClockTicker() {
+    if (clockTicker) clearInterval(clockTicker);
+
+    clockTicker = setInterval(() => {
+        if (!currentState || !currentState.clock) return;
+        setClockUI(currentState.clock);
+    }, 200);
+}
+
+function stopClockTicker() {
+    if (clockTicker) {
+        clearInterval(clockTicker);
+        clockTicker = null;
+    }
 }
 
 function showGameOverModal(text) {
@@ -345,6 +393,7 @@ function setStatusUI(data) {
     gameEnded = endedNow;
     if (gameEnded || data.turn !== myColor) selected = null;
     status.innerText = text;
+    if (gameEnded || data.clock?.ended) stopClockTicker();
     if (gameEnded) showGameOverModal(text);
     else hideGameOverModal();
 }
@@ -405,9 +454,12 @@ async function joinCurrentRoom() {
 
 function renderBoardFromState(data) {
     currentState = data;
-    currentBoard = data.board;
-    setClockUI(data.clock);
-    setStatusUI(data);
+currentBoard = data.board;
+setStatusUI(data);
+setClockUI(data.clock);
+
+if (data.clock?.ended || gameEnded) stopClockTicker();
+else startClockTicker();
 
     const boardDiv = document.getElementById("board");
     boardDiv.innerHTML = "";
@@ -589,10 +641,10 @@ function isPathClear(x1, y1, x2, y2) {
 
 async function resetGame() {
     if (!roomId) return;
+    stopClockTicker();
     await fetch(`${API_BASE}/rooms/${roomId}/reset`, { method: "POST" });
     selected = null;
     gameEnded = false;
-    hideGameOverModal();
     await joinCurrentRoom();
     await loadBoard();
 }
