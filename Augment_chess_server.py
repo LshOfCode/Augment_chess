@@ -354,7 +354,7 @@ async def rematch_room(room_id: str, data: dict = Body(...)):
     return {"success": True, "started": False, "state": build_state(room)}
 
 @app.post("/rooms/{room_id}/augment/select")
-def select_augment(room_id: str, req: AugmentSelectRequest):
+async def select_augment(room_id: str, req: AugmentSelectRequest):
     room = rooms.get(room_id)
     if not room:
         raise HTTPException(status_code=404)
@@ -366,9 +366,18 @@ def select_augment(room_id: str, req: AugmentSelectRequest):
 
     room["augment"]["selected"][color] = req.augment_id
 
+    await broadcast(room_id, {
+        "type": "update",
+        "state": build_state(room)
+    })
+
     both_done = (
         room["augment"]["selected"]["W"] is not None and
         room["augment"]["selected"]["B"] is not None
+        await broadcast(room_id, {
+            "type": "update",
+            "state": build_state(room)
+        })
     )
 
     if both_done:
