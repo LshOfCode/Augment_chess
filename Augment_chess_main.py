@@ -70,7 +70,7 @@ class Board:
         self._record_position()
         return {"success": True}
 
-    def _apply_move(self, x1: int, y1: int, x2: int, y2: int):
+    def _apply_move(self, x1: int, y1: int, x2: int, y2: int, promotion: str = "Q"):
         piece = self.grid[y1][x1]
         target = self.grid[y2][x2]
         if piece is None:
