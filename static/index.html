@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Online Chess</title>
+<title>Augment_Chess</title>
 <style>
 body {
     display: flex;
@@ -423,21 +423,29 @@ img {
         </div>
 
         <div id="augmentOverlay">
-            <div id="augmentPanel">
-                <div id="augmentStatus">증강을 선택하세요</div>
+    <div id="augmentPanel">
+        <div id="augmentStatus">증강을 선택하세요</div>
+<div id="augmentTimer">
+    <div id="augmentBar" class="silver"></div>
+</div>
+        <div id="augmentCards">
+            <div class="augment-card silver" data-index="0">
+                <div class="augment-card-title">전장의 안개</div>
+                <div class="augment-card-desc">상대는 네 기물이 이동 가능한 칸만 볼 수 있습니다.</div>
+            </div>
 
-                <div id="augmentTimer">
-                    <div id="augmentBar" class="silver"></div>
-                </div>
+            <div class="augment-card gold" data-index="1">
+                <div class="augment-card-title">언더 프로모션!!</div>
+                <div class="augment-card-desc">상대는 퀸으로 프로모션 할 수 없습니다.</div>
+            </div>
 
-                <div id="augmentCards"></div>
-
-                <div class="augment-auto-text">
-                    시간이 끝나면 맨 왼쪽 증강이 자동 선택됩니다
-                </div>
+            <div class="augment-card diamond" data-index="2">
+                <div class="augment-card-title">왕의 각성</div>
+                <div class="augment-card-desc">왕이 더 강하게 전장을 통제합니다.</div>
             </div>
         </div>
     </div>
+</div>
 
     <div id="clockPanel">
         <div id="topClock" class="clock-box">흑 10:00</div>
@@ -466,6 +474,7 @@ let augmentAutoPickId = null;
 let augmentOpen = false;
 let augmentLocked = false;
 let selectedAugmentIndex = null;
+let augmentShownThisGame = false;
 
 const DEBUG_AUGMENTS = [
     {
@@ -484,6 +493,15 @@ const DEBUG_AUGMENTS = [
         description: "왕이 주변 한 칸에서 킹처럼 더 날카롭게 전장을 통제합니다."
     }
 ];
+
+function hideAugmentOverlay() {
+    const overlay = document.getElementById("augmentOverlay");
+    const cards = document.querySelectorAll(".augment-card");
+
+    overlay.classList.remove("show");
+    cards.forEach(card => card.classList.remove("show"));
+    augmentOpen = false;
+}
 
 function updateRematchButton(rematch) {
     const btn = document.getElementById("rematchBtn");
@@ -748,6 +766,17 @@ function renderBoardFromState(data) {
     setStatusUI(data);
     setClockUI(data.clock);
     updateRematchButton(data.rematch);
+
+    const bothPlayersReady = !!(data.players && data.players.W && data.players.B);
+
+if (
+    bothPlayersReady &&
+    !augmentShownThisGame &&
+    !gameEnded
+) {
+    augmentShownThisGame = true;
+    showAugmentOverlay();
+}
 
     if (data.clock?.ended || gameEnded) stopClockTicker();
     else startClockTicker();
@@ -1031,6 +1060,9 @@ function leaveRoom() {
     currentState = null;
     selected = null;
     gameEnded = false;
+    augmentOpen = false;
+augmentShownThisGame = false;
+hideAugmentOverlay();
 
     setRoomToUrl(null);
     updateRoomBox();
@@ -1174,20 +1206,27 @@ function showAugmentOverlay({
     selectedAugmentIndex = null;
 
     overlay.classList.add("show");
+setAugmentBarTier(tier);
+
+if (myTurn) {
+    setAugmentStatus("증강을 선택하세요");
+} else {
+    setAugmentStatus("상대가 증강을 고르는 중...");
+}
+
+setTimeout(() => {
     renderAugmentCards(options);
-    setAugmentBarTier(tier);
 
     if (myTurn) {
-        setAugmentStatus("증강을 선택하세요");
         startAugmentTimer(durationMs);
     } else {
-        setAugmentStatus("상대가 증강을 고르는 중...");
         disableAugmentCards();
         clearAugmentTimer();
         const bar = document.getElementById("augmentBar");
         bar.style.transition = "none";
         bar.style.width = "100%";
     }
+}, 1000);
 }
 
 function setAugmentWaiting(isWaiting) {

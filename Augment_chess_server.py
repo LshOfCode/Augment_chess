@@ -50,6 +50,7 @@ def build_state(room):
     data = room["board"].to_dict()
     data["clock"] = room["time"]
     data["rematch"] = room["rematch"]
+    data["players"] = room["players"]
     return data
 
 
@@ -61,6 +62,10 @@ def update_clock(room):
         return
 
     if clock["ended"]:
+        return
+
+    if clock["running"] is None:
+        clock["last_update"] = time.time()
         return
 
     now = time.time()
@@ -117,8 +122,11 @@ def join_room(room_id: str, data: dict = Body(...)):
 
     if players["B"] is None:
         players["B"] = player_id
+
+        # 증강 선택 전이니까 시간 멈춤
         room["time"]["last_update"] = time.time()
-        room["time"]["running"] = room["board"].turn
+        room["time"]["running"] = None
+
         return {"color": "B"}
 
     return {"color": "S"}
