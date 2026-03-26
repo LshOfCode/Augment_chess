@@ -1,9 +1,9 @@
+import random
 from __future__ import annotations
 
 from copy import deepcopy
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
-import random
 
 
 @dataclass
@@ -96,6 +96,7 @@ class Board:
     def _apply_move(self, x1: int, y1: int, x2: int, y2: int, promotion: str = "Q"):
         piece = self.grid[y1][x1]
         target = self.grid[y2][x2]
+        
         if piece is None:
             return
 
@@ -112,22 +113,6 @@ class Board:
             captured_piece = self.grid[capture_y][x2]
             self.grid[capture_y][x2] = None
 
-        # 🔥 재정비 발동
-        if captured_piece is not None and captured_piece.name in {"B", "N"}:
-            owner = captured_piece.color
-            if self.effects[owner].get("reorganize", 0) > 0:
-                empty_cells = []
-
-                for yy in range(8):
-                    for xx in range(8):
-                        if self.grid[yy][xx] is None:
-                            empty_cells.append((xx, yy))
-
-                if empty_cells:
-                    spawn_x, spawn_y = random.choice(empty_cells)
-                    self.spawn_pawn(owner, spawn_x, spawn_y)
-
-                self.effects[owner]["reorganize"] -= 1   
 
         if piece.name == "K" and abs(x2 - x1) == 2:
             if x2 > x1:
@@ -169,6 +154,21 @@ class Board:
 
         self.grid[y2][x2] = piece
         self.grid[y1][x1] = None
+        if captured_piece is not None and captured_piece.name in {"B", "N"}:
+            owner = captured_piece.color
+            if self.effects[owner].get("reorganize", 0) > 0:
+                empty_cells = []
+
+                for yy in range(8):
+                    for xx in range(8):
+                        if self.grid[yy][xx] is None:
+                            empty_cells.append((xx, yy))
+
+                if empty_cells:
+                    spawn_x, spawn_y = random.choice(empty_cells)
+                    self.spawn_pawn(owner, spawn_x, spawn_y)
+
+                self.effects[owner]["reorganize"] -= 1
 
         if piece.name == "P" and ((piece.color == "W" and y2 == 0) or (piece.color == "B" and y2 == 7)):
             promotion = (promotion or "Q").upper()
