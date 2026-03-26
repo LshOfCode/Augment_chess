@@ -227,8 +227,8 @@ img {
         </div>
     </div>
     <div id="clockPanel">
-        <div id="topClock" class="clock-box">흑 600s</div>
-        <div id="bottomClock" class="clock-box">백 600s</div>
+        <div id="topClock" class="clock-box">흑 10:00</div>
+<div id="bottomClock" class="clock-box">백 10:00</div>
     </div>
 </div>
 <script>
@@ -327,18 +327,15 @@ function setClockUI(clock) {
     w = Math.max(0, w);
     b = Math.max(0, b);
 
-    document.getElementById("topClock").innerText = `흑 ${formatTime(b)}`;
-document.getElementById("bottomClock").innerText = `백 ${formatTime(w)}`;
+    const top = document.getElementById("topClock");
+    const bottom = document.getElementById("bottomClock");
+
+    top.innerText = `흑 ${formatTime(b)}`;
+    bottom.innerText = `백 ${formatTime(w)}`;
+
+    top.style.color = b <= 10 ? "red" : "black";
+    bottom.style.color = w <= 10 ? "red" : "black";
 }
-
-const top = document.getElementById("topClock");
-const bottom = document.getElementById("bottomClock");
-
-top.innerText = `흑 ${formatTime(b)}`;
-bottom.innerText = `백 ${formatTime(w)}`;
-
-top.style.color = b <= 10 ? "red" : "black";
-bottom.style.color = w <= 10 ? "red" : "black";
 
 function startClockTicker() {
     if (clockTicker) clearInterval(clockTicker);
@@ -673,6 +670,8 @@ function leaveRoom() {
 
 ensurePlayerId();
 renderEmptyBoard();
+setClockUI({ W: 600, B: 600, running: null, ended: false, last_update: Date.now() / 1000 });
+
 roomId = getRoomFromUrl();
 updateRoomBox();
 updateColorBox();
