@@ -6,8 +6,15 @@ import random
 
 def apply_no_castling(game, player):
     enemy = 'B' if player == 'W' else 'W'
-    game.effects[enemy]["no_castling"] = True
 
+    # 상대가 이미 왕권 강화를 먹어서 캐슬링이 원래 막혀 있으면
+    # 내 캐슬링 금지는 사실상 헛증강이므로 폰 보급 보상 발동
+    if game.effects[enemy].get("king_buff") and game.effects[enemy].get("no_castling"):
+        apply_pawn_supply(game, player)
+        return
+
+    game.effects[enemy]["no_castling"] = True
+    
 def apply_king_buff(game, player):
     game.effects[player]["king_buff"] = True
     game.effects[player]["no_castling"] = True
