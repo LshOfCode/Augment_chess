@@ -7,9 +7,7 @@ import random
 def apply_no_castling(game, player):
     enemy = 'B' if player == 'W' else 'W'
 
-    # 상대가 이미 왕권 강화를 먹어서 캐슬링이 원래 막혀 있으면
-    # 내 캐슬링 금지는 사실상 헛증강이므로 폰 보급 보상 발동
-    if game.effects[enemy].get("king_buff") and game.effects[enemy].get("no_castling"):
+    if game.effects[enemy].get("no_castling"):
         apply_pawn_supply(game, player)
         return
 
@@ -71,7 +69,7 @@ SILVER_AUGMENTS = [
     {
         "id": "pawn_supply",
         "name": "폰 보급",
-        "desc": "자신의 폰 앞 열중 한 칸을 골라 폰을 생성합니다.",
+        "desc": "자신의 폰 앞 열중 무작위 한칸에 폰이 생성됩니다.",
         "tier": "silver",
         "timing": "start",
         "icon": "Augment_icon/Augment_pawn_supply.png",
