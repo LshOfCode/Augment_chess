@@ -321,10 +321,10 @@
             height: 6px;
             background: orange;
             width: 100%;
-    height: 8px;
-    border-radius: 999px;
-    margin-bottom: 14px;
-    transition: width 0.1s linear;
+            height: 8px;
+            border-radius: 999px;
+            margin-bottom: 14px;
+            transition: width 0.1s linear;
         }
 
         #board {
@@ -576,11 +576,11 @@
         #guardianOverlay {
             position: fixed;
             inset: 0;
-            background: rgba(0, 0, 0, 0.85);
-            z-index: 2000;
-            display: flex;
+            display: none;
             justify-content: center;
             align-items: center;
+            background: rgba(0, 0, 0, 0.82);
+            z-index: 2000;
         }
 
         #guardianOverlay.show {
@@ -594,6 +594,7 @@
             padding: 20px 24px;
             min-width: 320px;
             text-align: center;
+            position: relative;
         }
 
         #guardianStatus {
@@ -1017,15 +1018,6 @@
             </div>
         </div>
 
-        <div id="guardianOverlay">
-            <div id="guardianPanel">
-                <div id="guardianTimerBar"></div>
-                <div id="guardianStatus">균형의 수호자 진행 중</div>
-                <div id="guardianScore">점수: 0 / 0</div>
-                <button id="guardianConfirmBtn" onclick="confirmGuardian()" disabled>확인</button>
-            </div>
-        </div>
-
         <div id="augmentOverlay">
             <div id="augmentPanel">
                 <div id="augmentStatus">증강을 선택하세요</div>
@@ -1036,6 +1028,16 @@
                 <div id="augmentCards"></div>
             </div>
         </div>
+
+        <div id="guardianOverlay">
+            <div id="guardianPanel">
+                <div id="guardianTimerBar"></div>
+                <div id="guardianStatus">균형의 수호자 진행 중</div>
+                <div id="guardianScore">점수: 0 / 0</div>
+                <button id="guardianConfirmBtn" onclick="confirmGuardian()" disabled>확인</button>
+            </div>
+        </div>
+
 
         <button id="augmentDebugBtn" onclick="openDebugAugment()">증강 테스트</button>
 
@@ -2238,15 +2240,20 @@
                 const statusEl = document.getElementById("guardianStatus");
                 const scoreEl = document.getElementById("guardianScore");
                 const confirmBtn = document.getElementById("guardianConfirmBtn");
+                const clockPanel = document.getElementById("clockPanel");
 
                 if (!overlay) return;
 
                 if (!guardianMode || !guardianState) {
                     overlay.classList.remove("show");
+                    overlay.style.display = "none";
+                    if (clockPanel) clockPanel.style.display = "";
                     return;
                 }
 
+                overlay.style.display = "flex";
                 overlay.classList.add("show");
+                if (clockPanel) clockPanel.style.display = "none";
 
                 const current = guardianState.current;
                 const currentText = current === "W" ? "백" : current === "B" ? "흑" : "?";
@@ -2262,10 +2269,7 @@
                 }
 
                 scoreEl.innerText = `점수: ${guardianState.score || 0} / ${guardianState.max_score || 0}`;
-
-                if (confirmBtn) {
-                    confirmBtn.disabled = !isMyGuardianTurn() || !guardianState.selected_self;
-                }
+                confirmBtn.disabled = !isMyGuardianTurn() || !guardianState.selected_self;
             }
 
             async function handleGuardianClick(x, y) {
