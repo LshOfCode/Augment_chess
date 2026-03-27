@@ -872,6 +872,7 @@
                 <div id="bottomClock" class="clock-box">백 10:00</div>
             </div>
         </div>
+
         <div id="ownedAugmentOverlay">
             <button id="ownedAugmentClose" onclick="closeOwnedAugmentDetail()">✕</button>
 
@@ -881,6 +882,7 @@
                 <div id="ownedAugmentDesc"></div>
             </div>
         </div>
+
         <button id="augmentDebugBtn" onclick="openDebugAugment()">증강 테스트</button>
 
         <script>
@@ -906,6 +908,7 @@
             let augmentCloseTimeout = null;
             let ownedAugments = [];
             let enemyOwnedAugments = [];
+            let myOwnedAugments = [];
 
             const DEBUG_AUGMENTS = [
                 {
@@ -1809,20 +1812,8 @@
                 }
 
                 try {
-                    const options = currentState?.augment?.choices?.[myColor] ?? [];
-                    const picked = options[index];
-
                     const result = await submitAugmentSelection(index, autoPicked);
 
-                    if (picked) {
-                        myOwnedAugments.push({
-                            tier: picked.tier,
-                            title: picked.title,
-                            description: picked.description,
-                            icon: picked.icon || ""
-                        });
-                        renderOwnedAugments();
-                    }
                     if (result?.both_done) {
                         hideAugmentOverlay();
                     } else {
@@ -1831,6 +1822,7 @@
 
                     if (result?.state) {
                         currentState = result.state;
+                        renderBoardFromState(result.state);
                     }
                 } catch (err) {
                     console.error(err);
