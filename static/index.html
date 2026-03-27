@@ -1379,9 +1379,9 @@
 
                     const augmentState = data.augment;
 
+                    const guardian = data.guardian || null;
                     guardianMode = !!guardian?.active;
-                    guardianState = guardian || null;
-
+                    guardianState = guardian;
                     if (augmentState?.owned) {
                         if (myColor === "W" || myColor === "B") {
                             myOwnedAugments = augmentState.owned[myColor] ?? [];
