@@ -138,6 +138,12 @@
 
         .owned-augment-slot.filled {
             cursor: pointer;
+            pointer-events: auto;
+            z-index: 5;
+        }
+
+        .owned-augment-slot.filled * {
+            pointer-events: none;
         }
 
         .owned-augment-slot.silver {
@@ -900,30 +906,24 @@
             </div>
         </div>
 
-        <div id="gameArea">
-            <div id="leftAugmentColumn">
-                ...
-            </div>
+        <div id="boardWrap">
+            <div id="board"></div>
 
-            <div id="boardWrap">
-                <div id="board"></div>
-
-                <div id="gameOverModal">
-                    <div class="modal-card">
-                        <div id="modalTitle">게임 종료</div>
-                        <div class="modal-actions">
-                            <button id="rematchBtn" onclick="requestRematch()">재대결 (0/2)</button>
-                            <button onclick="leaveRoom()">나가기</button>
-                        </div>
+            <div id="gameOverModal">
+                <div class="modal-card">
+                    <div id="modalTitle">게임 종료</div>
+                    <div class="modal-actions">
+                        <button id="rematchBtn" onclick="requestRematch()">재대결 (0/2)</button>
+                        <button onclick="leaveRoom()">나가기</button>
                     </div>
                 </div>
             </div>
+        </div>
 
-            <div id="rightSidePanel">
-                <div id="clockPanel">
-                    <div id="topClock" class="clock-box">흑 10:00</div>
-                    <div id="bottomClock" class="clock-box">백 10:00</div>
-                </div>
+        <div id="rightSidePanel">
+            <div id="clockPanel">
+                <div id="topClock" class="clock-box">흑 10:00</div>
+                <div id="bottomClock" class="clock-box">백 10:00</div>
             </div>
         </div>
 
@@ -1982,19 +1982,25 @@
                 const desc = document.getElementById("ownedAugmentDesc");
                 const art = document.getElementById("ownedAugmentArt");
 
+                if (!overlay || !card || !title || !desc || !art) {
+                    console.error("owned augment detail elements not found");
+                    return;
+                }
+
                 card.className = "";
                 card.id = "ownedAugmentCard";
-                card.classList.add(aug.tier);
+                if (aug.tier) card.classList.add(aug.tier);
 
-                title.innerText = aug.title;
-                desc.innerText = aug.description;
-                art.innerHTML = aug.icon ? `<img src="${aug.icon}" alt="${aug.title}" class="owned-augment-big-icon">` : "";
+                title.innerText = aug.title || "";
+                desc.innerText = aug.description || "";
+                art.innerHTML = aug.icon ? `<img src="${aug.icon}" alt="${aug.title || ''}" class="owned-augment-big-icon">` : "";
 
                 overlay.classList.add("show");
             }
 
             function closeOwnedAugmentDetail() {
-                document.getElementById("ownedAugmentOverlay").classList.remove("show");
+                const overlay = document.getElementById("ownedAugmentOverlay");
+                if (overlay) overlay.classList.remove("show");
             }
 
             function openDebugAugment() {
