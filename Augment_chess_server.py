@@ -83,13 +83,14 @@ def build_state(room):
     data["clock"] = room["time"]
     data["rematch"] = room["rematch"]
     data["players"] = room["players"]
-    data["move_count"] = room["move_count"]   # 추가
+    data["move_count"] = room["move_count"]
 
     augment_state = dict(room["augment"])
     augment_state["owned"] = room["owned"]
+    data["augment"] = augment_state
+
     data["guardian"] = room["guardian"]
 
-    data["augment"] = augment_state
     return data
 
 
@@ -202,7 +203,7 @@ async def join_room(room_id: str, data: dict = Body(...)):
 
         room["augment"]["choices"]["W"] = [
             serialize_augment(find_augment_by_id("guardian_of_balance")),
-            serialize_augment(find_augment_by_id("Augment_countdown")),
+            serialize_augment(find_augment_by_id("countdown")),
             serialize_augment(find_augment_by_id("pawn_supply")),
         ]
 
