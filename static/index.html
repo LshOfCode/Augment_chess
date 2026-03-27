@@ -1391,7 +1391,7 @@
                     const guardian = data.guardian || null;
                     guardianMode = !!guardian?.active;
                     guardianState = guardian;
-                    
+
                     if (augmentState?.owned) {
                         if (myColor === "W" || myColor === "B") {
                             myOwnedAugments = augmentState.owned[myColor] ?? [];
@@ -1916,8 +1916,6 @@
                     augmentLocked = false;
                     selectedAugmentIndex = null;
 
-                    if (rightPanel) rightPanel.style.visibility = "hidden";
-
                     overlay.style.display = "";
                     overlay.classList.add("show");
                     setAugmentBarTier(tier);
@@ -1959,8 +1957,6 @@
                         overlay.classList.remove("show");
                         overlay.style.display = "";
                     }
-
-                    if (rightPanel) rightPanel.style.visibility = "visible";
 
                     if (cards) cards.innerHTML = "";
 
