@@ -7,275 +7,100 @@
     <title>Augment_Chess</title>
     <style>
         #topbar,
-        #colorBox,
-        #status,
-        #gameArea,
-        #boardWrap,
-        #clockPanel,
-        .clock-box,
-        #modalTitle,
-        .modal-card,
-        button {
-            -webkit-user-select: none;
-            user-select: none;
-            -webkit-user-drag: none;
-        }
+#colorBox,
+#status,
+#gameArea,
+#boardWrap,
+#clockPanel,
+.clock-box,
+#modalTitle,
+.modal-card,
+button {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-user-drag: none;
+}
 
-        #roomBox {
-            -webkit-user-select: text;
-            user-select: text;
-        }
+#roomBox {
+    -webkit-user-select: text;
+    user-select: text;
+}
 
-        #topbar {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            margin-bottom: 14px;
-            flex-wrap: wrap;
-            justify-content: center;
-        }
-
-        #roomBox,
-        #colorBox,
-        #status,
-        .clock-box,
-        .modal-card {
-            background: white;
-            color: black;
-            border-radius: 10px;
-        }
-
-        #roomBox,
-        #colorBox {
-            font-size: 16px;
-            padding: 10px 14px;
-        }
-
-        #status {
-            font-size: 20px;
-            font-weight: bold;
-            padding: 10px 18px;
-            min-width: 220px;
-            text-align: center;
-            margin-bottom: 16px;
-        }
-
-        button,
-        input {
-            font-size: 16px;
-            padding: 8px 12px;
-            border-radius: 8px;
-            border: none;
-        }
-
-        input {
-            -webkit-user-select: text;
-            user-select: text;
-        }
-
-        .augment-group {
-            width: 300px;
-            display: grid;
-            grid-template-columns: repeat(3, 88px);
-            grid-template-rows: repeat(2, 124px);
-            column-gap: 10px;
-            row-gap: 14px;
-            justify-content: center;
-        }
-
-        .owned-augment-slot {
-            width: 88px;
-            height: 124px;
-            border: 3px solid rgba(255, 255, 255, 0.35);
-            border-radius: 16px;
-            background: rgba(255, 255, 255, 0.04);
-            box-sizing: border-box;
-            cursor: default;
-            position: relative;
-            overflow: hidden;
-            padding: 8px;
-        }
-
-        .owned-augment-mini-title {
-            position: absolute;
-            top: 8px;
-            left: 8px;
-            right: 8px;
-            font-size: 11px;
-            font-weight: 900;
-            line-height: 1.05;
-            word-break: keep-all;
-            color: #111;
-            z-index: 2;
-        }
-
-        .owned-augment-mini-art {
-            position: absolute;
-            left: 6px;
-            right: 6px;
-            bottom: 6px;
-            top: 38px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .owned-augment-mini-icon {
-            width: 64px;
-            height: 64px;
-            object-fit: contain;
-            pointer-events: none;
-        }
-
-        .owned-augment-slot.filled {
-            cursor: pointer;
-        }
-
-        .owned-augment-slot.silver {
-            background: linear-gradient(180deg, #5f656d 0%, #8b939d 28%, #bbc3cc 62%, #eef2f6 100%);
-        }
-
-        .owned-augment-slot.gold {
-            background: linear-gradient(180deg, #8c6700 0%, #c99708 26%, #f0c840 58%, #fff0b0 100%);
-        }
-
-        .owned-augment-slot.diamond {
-            background: linear-gradient(180deg, #0a5f7f 0%, #1494c0 26%, #43c9ee 58%, #dcfcff 100%);
-        }
-
-        .owned-augment-mini-title {
-            font-size: 14px;
-            font-weight: 900;
-            line-height: 1.05;
-            word-break: keep-all;
-            color: #111;
-        }
-
-        /* ===== 먹은 증강 상세 보기 ===== */
-        #ownedAugmentOverlay {
-            position: fixed;
-            inset: 0;
-            display: none;
-            justify-content: center;
-            align-items: center;
-            background: rgba(0, 0, 0, 0.78);
-            z-index: 1200;
-        }
-
-        #ownedAugmentOverlay.show {
-            display: flex;
-        }
-
-        #ownedAugmentCard {
-            width: 340px;
-            min-height: 500px;
-            border-radius: 24px;
-            padding: 24px;
-            box-sizing: border-box;
-            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
-        }
-
-        #ownedAugmentCard.silver {
-            background: linear-gradient(180deg, #5f656d 0%, #8b939d 28%, #bbc3cc 62%, #eef2f6 100%);
-            color: #11161b;
-        }
-
-        #ownedAugmentCard.gold {
-            background: linear-gradient(180deg, #8c6700 0%, #c99708 26%, #f0c840 58%, #fff0b0 100%);
-            color: #221700;
-        }
-
-        #ownedAugmentCard.diamond {
-            background: linear-gradient(180deg, #0a5f7f 0%, #1494c0 26%, #43c9ee 58%, #dcfcff 100%);
-            color: #07181d;
-        }
-
-        #ownedAugmentClose {
-            position: fixed;
-            top: 28px;
-            right: 34px;
-            width: 68px;
-            height: 68px;
-            border: none;
-            border-radius: 16px;
-            font-size: 36px;
-            font-weight: bold;
-            background: rgba(255, 255, 255, 0.18);
-            color: white;
-            cursor: pointer;
-        }
-
-        #ownedAugmentTitle {
-            font-size: 42px;
-            font-weight: 900;
-            line-height: 1.05;
-            margin-bottom: 24px;
-            word-break: keep-all;
-        }
-
-        #ownedAugmentDesc {
-            font-size: 23px;
-            font-weight: 800;
-            line-height: 1.35;
-            background: rgba(255, 255, 255, 0.88);
-            border-radius: 18px;
-            padding: 18px;
-            color: #222;
-        }
-
-        #boardWrap {
-            position: relative;
-            width: 564px;
-            height: 564px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            isolation: isolate;
-            flex: 0 0 564px;
-        }
-
-        #board {
-            display: grid;
-            grid-template-columns: repeat(8, 70px);
-            grid-template-rows: repeat(8, 70px);
-            width: 560px;
-            height: 560px;
-            border: 2px solid white;
-            box-sizing: content-box;
-            position: relative;
-            z-index: 1;
-        }
-
-        body {
+body {
     display: flex;
     flex-direction: column;
     align-items: center;
     margin: 0;
-    padding: 24px 16px 40px;
-    box-sizing: border-box;
+    padding: 24px 16px 20px;
     min-height: 100vh;
+    box-sizing: border-box;
     background: #222;
     color: white;
     font-family: Arial, sans-serif;
     overflow-x: hidden;
 }
 
-#gameArea {
-    position: relative;
-    width: 100%;
-    min-height: 720px;
+#topbar {
     display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+#roomBox,
+#colorBox,
+#status,
+.clock-box,
+.modal-card {
+    background: white;
+    color: black;
+    border-radius: 10px;
+}
+
+#roomBox,
+#colorBox {
+    font-size: 16px;
+    padding: 10px 14px;
+}
+
+#status {
+    font-size: 20px;
+    font-weight: bold;
+    padding: 10px 18px;
+    min-width: 220px;
+    text-align: center;
+    margin-bottom: 16px;
+}
+
+button,
+input {
+    font-size: 16px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: none;
+}
+
+input {
+    -webkit-user-select: text;
+    user-select: text;
+}
+
+/* ===== 메인 레이아웃 ===== */
+#gameArea {
+    width: min(100%, 1280px);
+    min-height: 600px;
+    display: grid;
+    grid-template-columns: 220px 564px 110px;
+    column-gap: 44px;
     justify-content: center;
     align-items: center;
 }
 
 #leftAugmentColumn {
-    position: absolute;
-    top: 50%;
-    left: max(12px, calc(50% - 760px));
-    transform: translateY(-50%);
-    width: 280px;
-    height: 720px;
+    width: 220px;
+    height: 564px;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
@@ -283,18 +108,18 @@
 }
 
 .augment-group {
-    width: 280px;
+    width: 220px;
     display: grid;
-    grid-template-columns: repeat(3, 84px);
-    grid-template-rows: repeat(2, 118px);
+    grid-template-columns: repeat(3, 64px);
+    grid-template-rows: repeat(2, 92px);
     column-gap: 10px;
-    row-gap: 14px;
+    row-gap: 12px;
     justify-content: center;
 }
 
 .owned-augment-slot {
-    width: 84px;
-    height: 118px;
+    width: 64px;
+    height: 92px;
     border: 3px solid rgba(255, 255, 255, 0.35);
     border-radius: 16px;
     background: rgba(255, 255, 255, 0.04);
@@ -302,9 +127,143 @@
     cursor: default;
     position: relative;
     overflow: hidden;
-    padding: 8px;
+    padding: 5px;
 }
 
+.owned-augment-slot.filled {
+    cursor: pointer;
+}
+
+.owned-augment-slot.silver {
+    background: linear-gradient(180deg, #5f656d 0%, #8b939d 28%, #bbc3cc 62%, #eef2f6 100%);
+}
+
+.owned-augment-slot.gold {
+    background: linear-gradient(180deg, #8c6700 0%, #c99708 26%, #f0c840 58%, #fff0b0 100%);
+}
+
+.owned-augment-slot.diamond {
+    background: linear-gradient(180deg, #0a5f7f 0%, #1494c0 26%, #43c9ee 58%, #dcfcff 100%);
+}
+
+.owned-augment-mini-title {
+    position: absolute;
+    top: 5px;
+    left: 5px;
+    right: 5px;
+    font-size: 9px;
+    font-weight: 900;
+    line-height: 1.05;
+    word-break: keep-all;
+    color: #111;
+    z-index: 2;
+}
+
+.owned-augment-mini-art {
+    position: absolute;
+    left: 4px;
+    right: 4px;
+    bottom: 4px;
+    top: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.owned-augment-mini-icon {
+    width: 42px;
+    height: 42px;
+    object-fit: contain;
+    pointer-events: none;
+}
+
+/* ===== 먹은 증강 상세 보기 ===== */
+#ownedAugmentOverlay {
+    position: fixed;
+    inset: 0;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.78);
+    z-index: 1200;
+}
+
+#ownedAugmentOverlay.show {
+    display: flex;
+}
+
+#ownedAugmentCard {
+    width: 340px;
+    min-height: 500px;
+    border-radius: 24px;
+    padding: 24px;
+    box-sizing: border-box;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+}
+
+#ownedAugmentCard.silver {
+    background: linear-gradient(180deg, #5f656d 0%, #8b939d 28%, #bbc3cc 62%, #eef2f6 100%);
+    color: #11161b;
+}
+
+#ownedAugmentCard.gold {
+    background: linear-gradient(180deg, #8c6700 0%, #c99708 26%, #f0c840 58%, #fff0b0 100%);
+    color: #221700;
+}
+
+#ownedAugmentCard.diamond {
+    background: linear-gradient(180deg, #0a5f7f 0%, #1494c0 26%, #43c9ee 58%, #dcfcff 100%);
+    color: #07181d;
+}
+
+#ownedAugmentClose {
+    position: fixed;
+    top: 28px;
+    right: 34px;
+    width: 68px;
+    height: 68px;
+    border: none;
+    border-radius: 16px;
+    font-size: 36px;
+    font-weight: bold;
+    background: rgba(255, 255, 255, 0.18);
+    color: white;
+    cursor: pointer;
+}
+
+#ownedAugmentTitle {
+    font-size: 42px;
+    font-weight: 900;
+    line-height: 1.05;
+    margin-bottom: 24px;
+    word-break: keep-all;
+}
+
+#ownedAugmentDesc {
+    font-size: 23px;
+    font-weight: 800;
+    line-height: 1.35;
+    background: rgba(255, 255, 255, 0.88);
+    border-radius: 18px;
+    padding: 18px;
+    color: #222;
+}
+
+#ownedAugmentArt {
+    height: 180px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.owned-augment-big-icon {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+/* ===== 보드 ===== */
 #boardWrap {
     position: relative;
     width: 564px;
@@ -315,12 +274,87 @@
     isolation: isolate;
 }
 
-#rightSidePanel {
+#board {
+    display: grid;
+    grid-template-columns: repeat(8, 70px);
+    grid-template-rows: repeat(8, 70px);
+    width: 560px;
+    height: 560px;
+    border: 2px solid white;
+    box-sizing: content-box;
+    position: relative;
+    z-index: 1;
+}
+
+.cell {
+    width: 70px;
+    height: 70px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+}
+
+.white {
+    background: #f0d9b5;
+}
+
+.black {
+    background: #b58863;
+}
+
+.selected {
+    box-shadow: inset 0 0 0 4px red;
+}
+
+.move-dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: rgba(0, 255, 0, 0.85);
     position: absolute;
-    top: 50%;
-    left: calc(50% + 330px);
-    transform: translateY(-50%);
-    width: 140px;
+}
+
+.capture-ring {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    border: 4px solid orange;
+    box-sizing: border-box;
+    position: absolute;
+}
+
+.check-king {
+    width: 58px;
+    height: 58px;
+    border-radius: 50%;
+    background: rgba(255, 0, 0, 0.45);
+    position: absolute;
+    z-index: 1;
+}
+
+.winner-king {
+    width: 58px;
+    height: 58px;
+    border-radius: 50%;
+    background: rgba(144, 238, 144, 0.8);
+    position: absolute;
+    z-index: 1;
+}
+
+img {
+    width: 52px;
+    height: 52px;
+    pointer-events: none;
+    position: relative;
+    z-index: 2;
+    -webkit-user-drag: none;
+    user-select: none;
+}
+
+/* ===== 오른쪽 시계 ===== */
+#rightSidePanel {
+    width: 110px;
     height: 564px;
     display: flex;
     justify-content: center;
@@ -328,511 +362,369 @@
 }
 
 #clockPanel {
+    width: 110px;
     height: 564px;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
     align-items: center;
-    width: 130px;
 }
 
-        .clock-box {
-            font-size: 20px;
-            font-weight: bold;
-            padding: 12px 16px;
-            min-width: 110px;
-            text-align: center;
-        }
-
-        .cell {
-            width: 70px;
-            height: 70px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            position: relative;
-        }
-
-        .white {
-            background: #f0d9b5;
-        }
-
-        .black {
-            background: #b58863;
-        }
-
-        .selected {
-            box-shadow: inset 0 0 0 4px red;
-        }
-
-        .move-dot {
-            width: 16px;
-            height: 16px;
-            border-radius: 50%;
-            background: rgba(0, 255, 0, 0.85);
-            position: absolute;
-        }
-
-        .capture-ring {
-            width: 52px;
-            height: 52px;
-            border-radius: 50%;
-            border: 4px solid orange;
-            box-sizing: border-box;
-            position: absolute;
-        }
-
-        .check-king {
-            width: 58px;
-            height: 58px;
-            border-radius: 50%;
-            background: rgba(255, 0, 0, 0.45);
-            position: absolute;
-            z-index: 1;
-        }
-
-        .winner-king {
-            width: 58px;
-            height: 58px;
-            border-radius: 50%;
-            background: rgba(144, 238, 144, 0.8);
-            position: absolute;
-            z-index: 1;
-        }
-
-        img {
-            width: 52px;
-            height: 52px;
-            pointer-events: none;
-            position: relative;
-            z-index: 2;
-            -webkit-user-drag: none;
-            user-select: none;
-        }
-
-        /* ===== 게임오버 모달 ===== */
-        #gameOverModal {
-            position: absolute;
-            inset: 0;
-            display: none;
-            justify-content: center;
-            align-items: center;
-            background: rgba(0, 0, 0, 0.45);
-            z-index: 100;
-        }
-
-        #gameOverModal.show {
-            display: flex;
-        }
-
-        .modal-card {
-            padding: 20px 24px;
-            min-width: 240px;
-            text-align: center;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
-            position: relative;
-            z-index: 101;
-        }
-
-        #modalTitle {
-            font-size: 24px;
-            font-weight: bold;
-            margin-bottom: 16px;
-        }
-
-        .modal-actions {
-            display: flex;
-            justify-content: center;
-            gap: 12px;
-        }
-
-        .modal-actions button {
-            min-width: 96px;
-        }
-
-        /* ===== 증강 오버레이 ===== */
-        #augmentOverlay {
-            position: fixed;
-            inset: 0;
-            display: none;
-            justify-content: center;
-            align-items: center;
-            background: rgba(0, 0, 0, 0.78);
-            backdrop-filter: blur(4px);
-            z-index: 1000;
-        }
-
-        #augmentOverlay.show {
-            display: flex;
-        }
-
-        #augmentPanel {
-            position: relative;
-            width: 100vw;
-            height: 100vh;
-            pointer-events: auto;
-        }
-
-        #augmentStatus {
-            position: absolute;
-            top: 10px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: white;
-            color: black;
-            border-radius: 12px;
-            padding: 12px 22px;
-            font-size: 22px;
-            font-weight: bold;
-            min-width: 280px;
-            text-align: center;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
-            z-index: 2;
-        }
-
-        #augmentTimer {
-            position: absolute;
-            top: 150px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: min(820px, 72vw);
-            height: 18px;
-            background: rgba(255, 255, 255, 0.16);
-            border-radius: 999px;
-            overflow: hidden;
-            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
-            z-index: 2;
-        }
-
-        #augmentBar {
-            width: 100%;
-            height: 100%;
-            border-radius: 999px;
-            transform-origin: left center;
-        }
-
-        #augmentBar.silver {
-            background: linear-gradient(90deg, #6c6f76 0%, #9197a3 40%, #c4cad2 70%, #eceff4 100%);
-        }
-
-        #augmentBar.gold {
-            background: linear-gradient(90deg, #8f6a00 0%, #c89a06 35%, #f2c94c 68%, #fff0a8 100%);
-        }
-
-        #augmentBar.diamond {
-            background: linear-gradient(90deg, #056d91 0%, #1497c7 35%, #37c4ea 70%, #d5fbff 100%);
-        }
-
-        #ownedAugmentArt {
-            height: 180px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 20px;
-        }
-
-        .owned-augment-big-icon {
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: contain;
-        }
-
-        .augment-card.pos-left {
-            left: 90px;
-            top: 240px;
-        }
-
-        .augment-card.pos-center {
-            left: 50%;
-            top: 420px;
-            transform: translateX(-50%) scale(0.96);
-        }
-
-        .augment-card.pos-right {
-            right: 90px;
-            top: 240px;
-        }
-
-        .augment-card.show.pos-left {
-            transform: scale(1);
-            opacity: 1;
-        }
-
-        .augment-card.show.pos-center {
-            transform: translateX(-50%) scale(1);
-            opacity: 1;
-        }
-
-        .augment-card.show.pos-right {
-            transform: scale(1);
-            opacity: 1;
-        }
-
-        .augment-card.show {
-            transform: translateY(0) scale(1);
-            opacity: 1;
-        }
-
-        .augment-badge {
-            font-size: 15px;
-            padding: 9px 14px;
-        }
-
-        .augment-index {
-            font-size: 18px;
-        }
-
-        .augment-name {
-            font-size: 30px;
-            line-height: 1.15;
-            margin-top: 28px;
-        }
-
-        .augment-desc {
-            font-size: 16px;
-            line-height: 1.6;
-            margin-top: 18px;
-        }
-
-
-
-        .augment-card-header {
-            padding: 16px 16px 10px 16px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 10px;
-        }
-
-        .augment-tier-badge {
-            font-size: 13px;
-            font-weight: 900;
-            padding: 7px 10px;
-            border-radius: 999px;
-            background: rgba(255, 255, 255, 0.22);
-            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
-            letter-spacing: 0.4px;
-        }
-
-        #augmentCards {
-            width: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: flex-start;
-            gap: 52px;
-            flex-wrap: nowrap;
-            margin-top: 240px;
-        }
-
-        .augment-card {
-            width: 250px;
-            height: 420px;
-            border-radius: 24px;
-            position: relative;
-            overflow: hidden;
-            cursor: pointer;
-            border: 3px solid rgba(255, 255, 255, 0.24);
-            box-shadow: 0 16px 36px rgba(0, 0, 0, 0.34);
-            transition:
-                transform 0.38s cubic-bezier(0.18, 0.9, 0.25, 1.28),
-                box-shadow 0.22s ease,
-                border-color 0.22s ease,
-                filter 0.22s ease,
-                opacity 0.30s ease;
-            transform: translateY(34px) scale(0.68);
-            opacity: 0;
-            filter: saturate(0.96);
-            color: #201500;
-            padding: 16px;
-            box-sizing: border-box;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .augment-card.show {
-            transform: translateY(0) scale(1);
-            opacity: 1;
-        }
-
-        .augment-card:hover {
-            transform: translateY(-8px) scale(1.03);
-            box-shadow: 0 24px 54px rgba(0, 0, 0, 0.48);
-            border-color: rgba(255, 255, 255, 0.44);
-            filter: saturate(1.03);
-        }
-
-        .augment-card.disabled {
-            pointer-events: none;
-            opacity: 0.65;
-            filter: grayscale(0.15);
-        }
-
-        .augment-card.selected-card {
-            outline: 4px solid rgba(255, 255, 255, 0.95);
-            transform: translateY(-10px) scale(1.06);
-            box-shadow:
-                0 0 0 3px rgba(255, 255, 255, 0.18),
-                0 0 26px rgba(255, 255, 255, 0.35),
-                0 22px 48px rgba(0, 0, 0, 0.48);
-            filter: saturate(1.12) brightness(1.04);
-        }
-
-        .augment-card::before {
-            content: "";
-            position: absolute;
-            inset: 0;
-            background:
-                radial-gradient(circle at top center, rgba(255, 255, 255, 0.20), transparent 34%),
-                linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent 28%);
-            pointer-events: none;
-        }
-
-        .augment-card::after {
-            content: "";
-            position: absolute;
-            inset: -18%;
-            background: radial-gradient(circle, rgba(255, 255, 255, 0.16), transparent 58%);
-            opacity: 0;
-            transition: opacity 0.30s ease;
-            pointer-events: none;
-        }
-
-        .augment-card.show::after {
-            opacity: 1;
-        }
-
-        .augment-card.silver {
-            background: linear-gradient(180deg, #5f656d 0%, #8b939d 28%, #bbc3cc 62%, #eef2f6 100%);
-            color: #11161b;
-        }
-
-        .augment-card.gold {
-            background: linear-gradient(180deg, #8c6700 0%, #c99708 26%, #f0c840 58%, #fff0b0 100%);
-            color: #221700;
-        }
-
-        .augment-card.diamond {
-            background: linear-gradient(180deg, #0a5f7f 0%, #1494c0 26%, #43c9ee 58%, #dcfcff 100%);
-            color: #07181d;
-        }
-
-        /* 예전 헤더 안 씀 */
-        .augment-card-header {
-            display: none;
-        }
-
-        /* 예전 티어 뱃지 안 씀 */
-        .augment-tier-badge {
-            display: none;
-        }
-
-        /* 예전 숫자 안 씀 */
-        .augment-card-index {
-            display: none;
-        }
-
-        .augment-card-body {
-            position: relative;
-            z-index: 1;
-            display: grid;
-            grid-template-rows: 64px 1fr 110px;
-            row-gap: 16px;
-            height: 100%;
-            padding: 0;
-        }
-
-        .augment-card-title {
-            font-size: 27px;
-            font-weight: 900;
-            line-height: 1.05;
-            word-break: keep-all;
-            letter-spacing: -0.8px;
-            margin: 0;
-            white-space: pre-line;
-            display: flex;
-            align-items: flex-start;
-            justify-content: flex-start;
-        }
-
-        .augment-card-desc {
-            font-size: 17px;
-            font-weight: 900;
-            line-height: 1.18;
-            word-break: keep-all;
-            letter-spacing: -0.4px;
-            color: #2a1d00;
-            background: rgba(255, 255, 255, 0.92);
-            border-radius: 18px;
-            padding: 14px;
-            box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.55);
-            margin: 0;
-            white-space: pre-line;
-            display: flex;
-            align-items: flex-start;
-        }
-
-        .augment-card-art {
-            border-radius: 18px;
-            background: rgba(255, 255, 255, 0.06);
-            box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.10);
-            min-height: 0;
-        }
-
-        .augment-auto-text {
-            font-size: 14px;
-            color: rgba(255, 255, 255, 0.92);
-            text-align: center;
-            margin-top: 2px;
-        }
-
-        #augmentDebugBtn {
-            position: fixed;
-            right: 14px;
-            bottom: 14px;
-            z-index: 30;
-            opacity: 0.6;
-        }
-
-        #augmentDebugBtn:hover {
-            opacity: 1;
-        }
-
-        @media (max-width: 1280px) {
+.clock-box {
+    font-size: 18px;
+    font-weight: bold;
+    padding: 10px 12px;
+    min-width: 92px;
+    text-align: center;
+}
+
+/* ===== 게임오버 모달 ===== */
+#gameOverModal {
+    position: absolute;
+    inset: 0;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 100;
+}
+
+#gameOverModal.show {
+    display: flex;
+}
+
+.modal-card {
+    padding: 20px 24px;
+    min-width: 240px;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+    position: relative;
+    z-index: 101;
+}
+
+#modalTitle {
+    font-size: 24px;
+    font-weight: bold;
+    margin-bottom: 16px;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+}
+
+.modal-actions button {
+    min-width: 96px;
+}
+
+/* ===== 증강 오버레이 ===== */
+#augmentOverlay {
+    position: fixed;
+    inset: 0;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.78);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+}
+
+#augmentOverlay.show {
+    display: flex;
+}
+
+#augmentPanel {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: auto;
+}
+
+#augmentStatus {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: white;
+    color: black;
+    border-radius: 12px;
+    padding: 12px 22px;
+    font-size: 22px;
+    font-weight: bold;
+    min-width: 280px;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+    z-index: 2;
+}
+
+#augmentTimer {
+    position: absolute;
+    top: 150px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(820px, 72vw);
+    height: 18px;
+    background: rgba(255, 255, 255, 0.16);
+    border-radius: 999px;
+    overflow: hidden;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+    z-index: 2;
+}
+
+#augmentBar {
+    width: 100%;
+    height: 100%;
+    border-radius: 999px;
+    transform-origin: left center;
+}
+
+#augmentBar.silver {
+    background: linear-gradient(90deg, #6c6f76 0%, #9197a3 40%, #c4cad2 70%, #eceff4 100%);
+}
+
+#augmentBar.gold {
+    background: linear-gradient(90deg, #8f6a00 0%, #c89a06 35%, #f2c94c 68%, #fff0a8 100%);
+}
+
+#augmentBar.diamond {
+    background: linear-gradient(90deg, #056d91 0%, #1497c7 35%, #37c4ea 70%, #d5fbff 100%);
+}
+
+#augmentCards {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 52px;
+    flex-wrap: nowrap;
+    margin-top: 240px;
+}
+
+.augment-card {
+    width: 250px;
+    height: 420px;
+    border-radius: 24px;
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    border: 3px solid rgba(255, 255, 255, 0.24);
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.34);
+    transition:
+        transform 0.38s cubic-bezier(0.18, 0.9, 0.25, 1.28),
+        box-shadow 0.22s ease,
+        border-color 0.22s ease,
+        filter 0.22s ease,
+        opacity 0.30s ease;
+    transform: translateY(34px) scale(0.68);
+    opacity: 0;
+    filter: saturate(0.96);
+    color: #201500;
+    padding: 16px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+}
+
+.augment-card.show {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+}
+
+.augment-card:hover {
+    transform: translateY(-8px) scale(1.03);
+    box-shadow: 0 24px 54px rgba(0, 0, 0, 0.48);
+    border-color: rgba(255, 255, 255, 0.44);
+    filter: saturate(1.03);
+}
+
+.augment-card.disabled {
+    pointer-events: none;
+    opacity: 0.65;
+    filter: grayscale(0.15);
+}
+
+.augment-card.selected-card {
+    outline: 4px solid rgba(255, 255, 255, 0.95);
+    transform: translateY(-10px) scale(1.06);
+    box-shadow:
+        0 0 0 3px rgba(255, 255, 255, 0.18),
+        0 0 26px rgba(255, 255, 255, 0.35),
+        0 22px 48px rgba(0, 0, 0, 0.48);
+    filter: saturate(1.12) brightness(1.04);
+}
+
+.augment-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(circle at top center, rgba(255, 255, 255, 0.20), transparent 34%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent 28%);
+    pointer-events: none;
+}
+
+.augment-card::after {
+    content: "";
+    position: absolute;
+    inset: -18%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.16), transparent 58%);
+    opacity: 0;
+    transition: opacity 0.30s ease;
+    pointer-events: none;
+}
+
+.augment-card.show::after {
+    opacity: 1;
+}
+
+.augment-card.silver {
+    background: linear-gradient(180deg, #5f656d 0%, #8b939d 28%, #bbc3cc 62%, #eef2f6 100%);
+    color: #11161b;
+}
+
+.augment-card.gold {
+    background: linear-gradient(180deg, #8c6700 0%, #c99708 26%, #f0c840 58%, #fff0b0 100%);
+    color: #221700;
+}
+
+.augment-card.diamond {
+    background: linear-gradient(180deg, #0a5f7f 0%, #1494c0 26%, #43c9ee 58%, #dcfcff 100%);
+    color: #07181d;
+}
+
+.augment-card-header,
+.augment-tier-badge,
+.augment-card-index {
+    display: none;
+}
+
+.augment-card-body {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-rows: 64px 1fr 110px;
+    row-gap: 16px;
+    height: 100%;
+    padding: 0;
+}
+
+.augment-card-title {
+    font-size: 27px;
+    font-weight: 900;
+    line-height: 1.05;
+    word-break: keep-all;
+    letter-spacing: -0.8px;
+    margin: 0;
+    white-space: pre-line;
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-start;
+}
+
+.augment-card-desc {
+    font-size: 17px;
+    font-weight: 900;
+    line-height: 1.18;
+    word-break: keep-all;
+    letter-spacing: -0.4px;
+    color: #2a1d00;
+    background: rgba(255, 255, 255, 0.92);
+    border-radius: 18px;
+    padding: 14px;
+    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.55);
+    margin: 0;
+    white-space: pre-line;
+    display: flex;
+    align-items: flex-start;
+}
+
+.augment-card-art {
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.06);
+    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.10);
+    min-height: 0;
+}
+
+.augment-auto-text {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.92);
+    text-align: center;
+    margin-top: 2px;
+}
+
+#augmentDebugBtn {
+    position: fixed;
+    right: 14px;
+    bottom: 14px;
+    z-index: 30;
+    opacity: 0.6;
+}
+
+#augmentDebugBtn:hover {
+    opacity: 1;
+}
+
+/* ===== 반응형 ===== */
+@media (max-width: 1280px) {
+    #gameArea {
+        width: min(100%, 1180px);
+        grid-template-columns: 200px 564px 100px;
+        column-gap: 28px;
+    }
+
     #leftAugmentColumn {
-        left: 12px;
-        width: 252px;
+        width: 200px;
     }
 
     .augment-group {
-        width: 252px;
-        grid-template-columns: repeat(3, 76px);
-        grid-template-rows: repeat(2, 108px);
+        width: 200px;
+        grid-template-columns: repeat(3, 58px);
+        grid-template-rows: repeat(2, 84px);
+        column-gap: 8px;
+        row-gap: 10px;
     }
 
     .owned-augment-slot {
-        width: 76px;
-        height: 108px;
+        width: 58px;
+        height: 84px;
+        padding: 4px;
     }
 
-    #rightSidePanel {
-        left: auto;
-        right: 12px;
-        width: 120px;
+    .owned-augment-mini-title {
+        font-size: 8px;
+        top: 4px;
+        left: 4px;
+        right: 4px;
     }
 
+    .owned-augment-mini-art {
+        top: 20px;
+        left: 3px;
+        right: 3px;
+        bottom: 3px;
+    }
+
+    .owned-augment-mini-icon {
+        width: 36px;
+        height: 36px;
+    }
+
+    #rightSidePanel,
     #clockPanel {
-        width: 110px;
+        width: 100px;
     }
 
     .clock-box {
-        min-width: 90px;
-        font-size: 18px;
-        padding: 10px 12px;
+        min-width: 84px;
+        font-size: 17px;
+        padding: 10px 10px;
     }
 }
 
 @media (max-width: 900px) {
     #gameArea {
+        width: 100%;
         min-height: auto;
         display: flex;
         flex-direction: column;
@@ -841,8 +733,6 @@
 
     #leftAugmentColumn,
     #rightSidePanel {
-        position: static;
-        transform: none;
         width: 100%;
         height: auto;
     }
@@ -850,6 +740,18 @@
     #leftAugmentColumn {
         order: 2;
         gap: 18px;
+    }
+
+    .augment-group {
+        width: 100%;
+        grid-template-columns: repeat(3, 64px);
+        grid-template-rows: repeat(2, 92px);
+        justify-content: center;
+    }
+
+    .owned-augment-slot {
+        width: 64px;
+        height: 92px;
     }
 
     #boardWrap {
