@@ -1227,43 +1227,43 @@
                 const ady = Math.abs(dy);
 
                 if (piece.name === "P") {
-                    const direction = piece.color === "W" ? -1 : 1;
-                    const startRow = piece.color === "W" ? 6 : 1;
-                    const hasPawnRetreat = !!currentState?.effects?.[piece.color]?.pawn_retreat;
-                    const weakenCount = Number(currentState?.effects?.[piece.color]?.pawn_slow ?? 0);
+    const direction = piece.color === "W" ? -1 : 1;
+    const startRow = piece.color === "W" ? 6 : 1;
+    const hasPawnRetreat = !!currentState?.effects?.[piece.color]?.pawn_retreat;
+    const slowCount = Number(currentState?.effects?.[piece.color]?.pawn_slow ?? 0);
 
-                    if (dx === 0 && dy === direction && !target) return true;
+    if (dx === 0 && dy === direction && !target) return true;
 
-                    if (hasPawnRetreat && dx === 0 && dy === -direction && !target) return true;
+    if (hasPawnRetreat && dx === 0 && dy === -direction && !target) return true;
 
-                    if (
-                        dx === 0 &&
-                        y1 === startRow &&
-                        dy === 2 * direction &&
-                        !target &&
-                        currentBoard[y1 + direction][x1] === null
-                    ) {
-                        if (slowCount > 0) return false;
-                        return true;
-                    }
+    if (
+        dx === 0 &&
+        y1 === startRow &&
+        dy === 2 * direction &&
+        !target &&
+        currentBoard[y1 + direction][x1] === null
+    ) {
+        if (slowCount > 0) return false;
+        return true;
+    }
 
-                    if (adx === 1 && dy === direction && target && target.color !== piece.color) return true;
+    if (adx === 1 && dy === direction && target && target.color !== piece.color) return true;
 
-                    if (adx === 1 && dy === direction && !target && currentState?.last_move) {
-                        const [lx1, ly1, lx2, ly2] = currentState.last_move;
-                        const moved = currentBoard[ly2]?.[lx2];
-                        if (
-                            moved &&
-                            moved.name === "P" &&
-                            moved.color !== piece.color &&
-                            Math.abs(ly2 - ly1) === 2 &&
-                            ly2 === y1 &&
-                            lx2 === x2
-                        ) return true;
-                    }
+    if (adx === 1 && dy === direction && !target && currentState?.last_move) {
+        const [lx1, ly1, lx2, ly2] = currentState.last_move;
+        const moved = currentBoard[ly2]?.[lx2];
+        if (
+            moved &&
+            moved.name === "P" &&
+            moved.color !== piece.color &&
+            Math.abs(ly2 - ly1) === 2 &&
+            ly2 === y1 &&
+            lx2 === x2
+        ) return true;
+    }
 
-                    return false;
-                }
+    return false;
+}
 
                 if (piece.name === "N") {
                     return (adx === 2 && ady === 1) || (adx === 1 && ady === 2);
