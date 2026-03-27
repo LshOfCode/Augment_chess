@@ -551,39 +551,39 @@
         }
 
         #guardianOverlay {
-    position: fixed;
-    inset: 0;
-    display: none;
-    justify-content: center;
-    align-items: center;
-    background: rgba(0, 0, 0, 0.78);
-    z-index: 2000;
-}
+            position: fixed;
+            inset: 0;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.78);
+            z-index: 2000;
+        }
 
-#guardianOverlay.show {
-    display: flex;
-}
+        #guardianOverlay.show {
+            display: flex;
+        }
 
-#guardianPanel {
-    background: white;
-    color: black;
-    border-radius: 16px;
-    padding: 20px 24px;
-    min-width: 320px;
-    text-align: center;
-}
+        #guardianPanel {
+            background: white;
+            color: black;
+            border-radius: 16px;
+            padding: 20px 24px;
+            min-width: 320px;
+            text-align: center;
+        }
 
-#guardianStatus {
-    font-size: 22px;
-    font-weight: bold;
-    margin-bottom: 12px;
-}
+        #guardianStatus {
+            font-size: 22px;
+            font-weight: bold;
+            margin-bottom: 12px;
+        }
 
-#guardianScore {
-    font-size: 18px;
-    font-weight: bold;
-    margin-bottom: 14px;
-}
+        #guardianScore {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 14px;
+        }
 
         .augment-card {
             width: 370px;
@@ -1327,6 +1327,11 @@
                     setRoomToUrl(roomId);
                     updateRoomBox();
 
+                    selected = null;
+                    gameEnded = false;
+                    augmentShownThisGame = false;
+                    hideAugmentOverlay();
+
                     await joinCurrentRoom();
                     await loadBoard();
                     connectSocket();
@@ -1339,6 +1344,11 @@
                     roomId = input;
                     setRoomToUrl(roomId);
                     updateRoomBox();
+
+                    selected = null;
+                    gameEnded = false;
+                    augmentShownThisGame = false;
+                    hideAugmentOverlay();
 
                     await joinCurrentRoom();
                     await loadBoard();
@@ -1378,10 +1388,10 @@
                     updateRematchButton(data.rematch);
 
                     const augmentState = data.augment;
-
                     const guardian = data.guardian || null;
                     guardianMode = !!guardian?.active;
                     guardianState = guardian;
+                    
                     if (augmentState?.owned) {
                         if (myColor === "W" || myColor === "B") {
                             myOwnedAugments = augmentState.owned[myColor] ?? [];
@@ -1484,7 +1494,7 @@
 
                             boardDiv.appendChild(cell);
                         }
-                    updateGuardianUI();
+                        updateGuardianUI();
                     }
                 }
 
@@ -2178,50 +2188,50 @@
                 }
 
                 function updateGuardianUI() {
-    const overlay = document.getElementById("guardianOverlay");
-    const statusEl = document.getElementById("guardianStatus");
-    const scoreEl = document.getElementById("guardianScore");
-    const confirmBtn = document.getElementById("guardianConfirmBtn");
+                    const overlay = document.getElementById("guardianOverlay");
+                    const statusEl = document.getElementById("guardianStatus");
+                    const scoreEl = document.getElementById("guardianScore");
+                    const confirmBtn = document.getElementById("guardianConfirmBtn");
 
-    if (!overlay) return;
+                    if (!overlay) return;
 
-    if (!guardianMode || !guardianState) {
-        overlay.classList.remove("show");
-        return;
-    }
+                    if (!guardianMode || !guardianState) {
+                        overlay.classList.remove("show");
+                        return;
+                    }
 
-    overlay.classList.add("show");
+                    overlay.classList.add("show");
 
-    const current = guardianState.current;
-    const currentText = current === "W" ? "백" : current === "B" ? "흑" : "?";
+                    const current = guardianState.current;
+                    const currentText = current === "W" ? "백" : current === "B" ? "흑" : "?";
 
-    if (isMyGuardianTurn()) {
-        if (!guardianState.selected_self) {
-            statusEl.innerText = `${currentText}의 균형의 수호자 - 내 기물 선택`;
-        } else {
-            statusEl.innerText = `${currentText}의 균형의 수호자 - 상대 기물 선택`;
-        }
-    } else {
-        statusEl.innerText = `${currentText}의 균형의 수호자 진행 중...`;
-    }
+                    if (isMyGuardianTurn()) {
+                        if (!guardianState.selected_self) {
+                            statusEl.innerText = `${currentText}의 균형의 수호자 - 내 기물 선택`;
+                        } else {
+                            statusEl.innerText = `${currentText}의 균형의 수호자 - 상대 기물 선택`;
+                        }
+                    } else {
+                        statusEl.innerText = `${currentText}의 균형의 수호자 진행 중...`;
+                    }
 
-    scoreEl.innerText = `점수: ${guardianState.score || 0} / ${guardianState.max_score || 0}`;
+                    scoreEl.innerText = `점수: ${guardianState.score || 0} / ${guardianState.max_score || 0}`;
 
-    if (confirmBtn) {
-        confirmBtn.disabled = !isMyGuardianTurn() || !guardianState.selected_self;
-    }
-}
+                    if (confirmBtn) {
+                        confirmBtn.disabled = !isMyGuardianTurn() || !guardianState.selected_self;
+                    }
+                }
 
-function handleGuardianClick(x, y) {
-    if (!isMyGuardianTurn()) return;
+                function handleGuardianClick(x, y) {
+                    if (!isMyGuardianTurn()) return;
 
-    console.log("guardian click:", x, y);
-}
+                    console.log("guardian click:", x, y);
+                }
 
-async function confirmGuardian() {
-    if (!isMyGuardianTurn()) return;
-    console.log("guardian confirm");
-}
+                async function confirmGuardian() {
+                    if (!isMyGuardianTurn()) return;
+                    console.log("guardian confirm");
+                }
 
             </script>
             <div id="ownedAugmentOverlay" onclick="closeOwnedAugmentDetail()">
