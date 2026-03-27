@@ -62,7 +62,7 @@ SILVER_AUGMENTS = [
         "desc": "상대의 캐슬링이 금지됩니다.",
         "tier": "silver",
         "timing": "start",
-        "icon": "Augment_icon/Augment_no_castling.png",
+        "icon": "static/Augment_icon/Augment_no_castling.png",
         "apply": apply_no_castling,
     },
 
@@ -72,7 +72,7 @@ SILVER_AUGMENTS = [
         "desc": "자신의 폰 앞 열중 무작위 한칸에 폰이 생성됩니다.",
         "tier": "silver",
         "timing": "start",
-        "icon": "Augment_icon/Augment_pawn_supply.png",
+        "icon": "static/Augment_icon/Augment_pawn_supply.png",
         "apply": apply_pawn_supply,
     },
     
@@ -82,7 +82,7 @@ SILVER_AUGMENTS = [
     "desc": "내 킹이 원래 이동 외에 상하좌우로 2칸 이동할 수 있지만 캐슬링이 금지됩니다.",
     "tier": "silver",
     "timing": "start",
-    "icon": "Augment_icon/Augment_king_buff.png",
+    "icon": "static/Augment_icon/Augment_king_buff.png",
     "apply": apply_king_buff,
     },
 
@@ -92,7 +92,7 @@ SILVER_AUGMENTS = [
         "desc": "상대의 처음 2개의 기본 폰은 2칸 전진이 금지됩니다.",
         "tier": "silver",
         "timing": "start",
-        "icon": "Augment_icon/Augment_pawn_slow.png",
+        "icon": "static/Augment_icon/Augment_pawn_slow.png",
         "apply": apply_pawn_slow,
     },
 
@@ -102,7 +102,7 @@ SILVER_AUGMENTS = [
         "desc": "자신의 모든 비숍이 나이트로 전환됩니다.",
         "tier": "silver",
         "timing": "start",
-        "icon": "Augment_icon/Augment_bishop_to_knight.png",
+        "icon": "static/Augment_icon/Augment_bishop_to_knight.png",
         "apply": apply_bishop_to_knight,
     },
 
@@ -112,7 +112,7 @@ SILVER_AUGMENTS = [
         "desc": "자신의 모든 폰이 1칸 뒤로 이동할 수 있습니다.(잡기는 불가능)",
         "tier": "silver",
         "timing": "start",
-        "icon": "Augment_icon/Augment_pawn_retreat.png",
+        "icon": "static/Augment_icon/Augment_pawn_retreat.png",
         "apply": apply_pawn_retreat,
     },
 
@@ -122,7 +122,7 @@ SILVER_AUGMENTS = [
         "desc": "자신의 비숍 또는 나이트가 잡히면 무작위 빈칸에 폰을 하나 생성합니다.(1회 한정)",
         "tier": "silver",
         "timing": "start",
-        "icon": "Augment_icon/Augment_reorganize.png",
+        "icon": "static/Augment_icon/Augment_reorganize.png",
         "apply": apply_reorganize,
     },
 

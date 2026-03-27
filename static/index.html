@@ -85,39 +85,52 @@
 
         #gameArea {
             display: grid;
-            grid-template-columns: 372px 564px 372px;
+            grid-template-columns: 300px 564px 180px;
             align-items: center;
             justify-content: center;
-            column-gap: 28px;
+            column-gap: 20px;
             width: 100%;
         }
 
         #leftAugmentColumn {
-            width: 372px;
-            height: 860px;
+            width: 300px;
+            height: 720px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
             align-items: center;
-            flex: 0 0 372px;
+            flex: 0 0 300px;
         }
 
         .augment-group {
-            width: 372px;
+            width: 300px;
             display: grid;
-            grid-template-columns: repeat(3, 108px);
-            grid-template-rows: repeat(2, 150px);
-            column-gap: 14px;
-            row-gap: 18px;
+            grid-template-columns: repeat(3, 88px);
+            grid-template-rows: repeat(2, 124px);
+            column-gap: 10px;
+            row-gap: 14px;
             justify-content: center;
+        }
+
+        .owned-augment-slot {
+            width: 88px;
+            height: 124px;
+            border: 3px solid rgba(255, 255, 255, 0.35);
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.04);
+            box-sizing: border-box;
+            cursor: default;
+            position: relative;
+            overflow: hidden;
+            padding: 8px;
         }
 
         .owned-augment-mini-title {
             position: absolute;
-            top: 10px;
-            left: 10px;
-            right: 10px;
-            font-size: 13px;
+            top: 8px;
+            left: 8px;
+            right: 8px;
+            font-size: 11px;
             font-weight: 900;
             line-height: 1.05;
             word-break: keep-all;
@@ -127,33 +140,29 @@
 
         .owned-augment-mini-art {
             position: absolute;
-            left: 8px;
-            right: 8px;
-            bottom: 8px;
-            top: 48px;
+            left: 6px;
+            right: 6px;
+            bottom: 6px;
+            top: 38px;
             display: flex;
             align-items: center;
             justify-content: center;
         }
 
-        .owned-augment-mini-icon {
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: contain;
-            pointer-events: none;
+        #rightSidePanel {
+            width: 180px;
+            height: 720px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex: 0 0 180px;
         }
 
-        .owned-augment-slot {
-            width: 108px;
-            height: 150px;
-            border: 3px solid rgba(255, 255, 255, 0.35);
-            border-radius: 18px;
-            background: rgba(255, 255, 255, 0.04);
-            box-sizing: border-box;
-            cursor: default;
-            position: relative;
-            overflow: hidden;
-            padding: 10px;
+        .owned-augment-mini-icon {
+            width: 64px;
+            height: 64px;
+            object-fit: contain;
+            pointer-events: none;
         }
 
         .owned-augment-slot.filled {
@@ -261,15 +270,6 @@
             align-items: center;
             isolation: isolate;
             flex: 0 0 564px;
-        }
-
-        #rightSidePanel {
-            width: 372px;
-            height: 860px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            flex: 0 0 372px;
         }
 
         #board {
