@@ -187,7 +187,7 @@
         }
 
         /* ===== 먹은 증강 상세 보기 ===== */
-        #augmentOverlay {
+        #ownedAugmentOverlay {
             position: fixed;
             inset: 0;
             display: none;
@@ -195,7 +195,7 @@
             align-items: center;
             background: rgba(0, 0, 0, 0.82);
             backdrop-filter: blur(4px);
-            z-index: 9999;
+            z-index: 10001;
         }
 
         #ownedAugmentOverlay.show {
@@ -971,33 +971,6 @@
                 description: "왕이 주변 한 칸에서 킹처럼 더 날카롭게 전장을 통제합니다."
             }
         ];
-
-        function openOwnedAugmentDetail(aug) {
-            if (!aug) return;
-
-            const overlay = document.getElementById("ownedAugmentOverlay");
-            const card = document.getElementById("ownedAugmentCard");
-            const title = document.getElementById("ownedAugmentTitle");
-            const desc = document.getElementById("ownedAugmentDesc");
-            const art = document.getElementById("ownedAugmentArt");
-
-            if (!overlay || !card || !title || !desc || !art) {
-                console.error("먹은 증강 상세 모달 DOM 없음");
-                return;
-            }
-
-            card.className = "";
-            card.id = "ownedAugmentCard";
-            card.classList.add(aug.tier || "silver");
-
-            title.innerText = aug.title || "";
-            desc.innerText = aug.description || "";
-            art.innerHTML = aug.icon
-                ? `<img src="${aug.icon}" alt="${aug.title}" class="owned-augment-big-icon">`
-                : "";
-
-            overlay.classList.add("show");
-        }
 
         function closeOwnedAugmentDetail() {
             const overlay = document.getElementById("ownedAugmentOverlay");
@@ -2076,15 +2049,15 @@
             });
         }
     </script>
-    div id="ownedAugmentOverlay" onclick="closeOwnedAugmentDetail()">
-    <button id="ownedAugmentClose" onclick="event.stopPropagation(); closeOwnedAugmentDetail()">×</button>
+    <div id="ownedAugmentOverlay" onclick="closeOwnedAugmentDetail()">
+        <button id="ownedAugmentClose" onclick="event.stopPropagation(); closeOwnedAugmentDetail()">×</button>
 
-    <div id="ownedAugmentCard" class="silver" onclick="event.stopPropagation()">
-        <div id="ownedAugmentTitle"></div>
-        <div id="ownedAugmentArt"></div>
-        <div id="ownedAugmentDesc"></div>
+        <div id="ownedAugmentCard" class="silver" onclick="event.stopPropagation()">
+            <div id="ownedAugmentTitle"></div>
+            <div id="ownedAugmentArt"></div>
+            <div id="ownedAugmentDesc"></div>
+        </div>
     </div>
-</div>
 </body>
 
 </html>
