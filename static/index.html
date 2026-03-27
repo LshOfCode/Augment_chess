@@ -1420,12 +1420,6 @@
                 guardianMode = !!guardian?.active;
                 guardianState = guardian;
 
-                if (guardianMode) {
-                    document.getElementById("clockPanel").style.display = "none";
-                } else {
-                    document.getElementById("clockPanel").style.display = "";
-                }
-
                 if (augmentState?.owned) {
                     if (myColor === "W" || myColor === "B") {
                         myOwnedAugments = augmentState.owned[myColor] ?? [];
@@ -1546,8 +1540,8 @@
                         }
                         boardDiv.appendChild(cell);
                     }
-                    updateGuardianUI();
                 }
+                updateGuardianUI();
             }
 
             async function loadBoard() {
@@ -2243,6 +2237,13 @@
                 const clockPanel = document.getElementById("clockPanel");
 
                 if (!overlay) return;
+
+                // 🔥 증강 선택 중이면 가디언 UI 절대 띄우지 않음
+                if (currentState?.augment?.active || augmentOpen) {
+                    overlay.classList.remove("show");
+                    overlay.style.display = "none";
+                    return;
+                }
 
                 if (!guardianMode || !guardianState) {
                     overlay.classList.remove("show");
