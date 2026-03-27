@@ -435,8 +435,9 @@ async def select_augment(room_id: str, req: AugmentSelectRequest):
             if augment is not None:
                 augment["apply"](board, apply_color)
         room["augment"]["active"] = False
-        room["time"]["last_update"] = time.time()
         room["time"]["running"] = room["board"].turn
+        room["time"]["last_update"] = time.time()
+        update_clock(room)
 
         await broadcast(room_id, {
             "type": "update",

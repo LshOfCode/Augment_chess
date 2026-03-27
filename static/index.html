@@ -215,6 +215,8 @@
             padding: 20px;
             box-sizing: border-box;
             box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+            display: flex;
+            flex-direction: column;
         }
 
         #ownedAugmentCard.silver {
@@ -248,39 +250,57 @@
         }
 
         #ownedAugmentTitle {
+            min-height: 70px;
             font-size: 34px;
             font-weight: 900;
             line-height: 1.05;
-            margin-bottom: 24px;
             word-break: keep-all;
+            letter-spacing: -1px;
+            margin: 0 0 12px 0;
+            white-space: pre-line;
+            display: flex;
+            align-items: flex-start;
+            justify-content: flex-start;
         }
 
         #ownedAugmentDesc {
+            flex: 1;
+            min-height: 0;
             font-size: 22px;
             font-weight: 900;
-            line-height: 1.28;
-            background: rgba(255, 255, 255, 0.88);
+            line-height: 1.18;
+            word-break: keep-all;
+            letter-spacing: -0.5px;
+            background: rgba(255, 255, 255, 0.92);
             border-radius: 22px;
             padding: 18px;
             color: #222;
+            box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.55);
+            white-space: pre-line;
+            display: flex;
+            align-items: flex-start;
+            overflow: hidden;
         }
 
         #ownedAugmentArt {
-            height: 150px;
+            height: 160px;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-bottom: 20px;
+            margin-bottom: 12px;
             border-radius: 22px;
             overflow: hidden;
-            background: rgba(255, 255, 255, 0.12);
+            background: rgba(255, 255, 255, 0.06);
+            box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.10);
+            flex-shrink: 0;
         }
 
         .owned-augment-big-icon {
-            width: 100%;
-            height: 100%;
+            width: calc(100% - 32px);
+            height: calc(100% - 32px);
             object-fit: cover;
-            border-radius: 20px;
+            border-radius: 16px;
+            display: block;
         }
 
         /* ===== 보드 ===== */
@@ -953,6 +973,7 @@
             let gameEnded = false;
             let socket = null;
             let clockTicker = null;
+            let clockInterval = null;
 
             /* ===== augment state ===== */
             let augmentTimerId = null;
@@ -983,6 +1004,29 @@
                     description: "왕이 주변 한 칸에서 킹처럼 더 날카롭게 전장을 통제합니다."
                 }
             ];
+
+
+function resumeClockAfterAugment() {
+    if (clockInterval) clearInterval(clockInterval);
+
+    clockInterval = setInterval(() => {
+        if (currentTurn === 'W') {
+            whiteTime--;
+        } else {
+            blackTime--;
+        }
+
+        updateClockUI();
+
+        if (whiteTime <= 0 || blackTime <= 0) {
+            clearInterval(clockInterval);
+        }
+    }, 1000);
+}
+
+function startAugmentSelection() {
+    if (clockInterval) clearInterval(clockInterval);
+}
 
             function closeOwnedAugmentDetail() {
                 const overlay = document.getElementById("ownedAugmentOverlay");
@@ -1913,6 +1957,7 @@
 
                     if (result?.both_done) {
                         hideAugmentOverlay();
+                        startClockTicker();
                     } else {
                         setAugmentWaiting(true);
                     }
