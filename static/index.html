@@ -1287,6 +1287,7 @@
 
                     const effects = currentState?.effects || {};
 
+                    // 왕권 강화 2칸 이동
                     if (effects[piece.color]?.king_buff) {
                         if ((adx === 2 && ady === 0) || (adx === 0 && ady === 2)) {
                             const midX = x1 + (dx / 2);
@@ -1297,6 +1298,7 @@
                         }
                     }
 
+                    // 왕권 강화가 없을 때만 캐슬링 초록원
                     if (ady === 0 && adx === 2) {
                         if (effects[piece.color]?.no_castling) return false;
 

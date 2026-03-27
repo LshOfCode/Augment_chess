@@ -77,9 +77,9 @@ class Board:
 
         if piece.name == "P":
             start_row = 6 if piece.color == "W" else 1
-            weaken_count = self.effects[piece.color].get("pawn_slow", 0)
+            slow_count = self.effects[piece.color].get("pawn_slow", 0)
 
-            if y1 == start_row and weaken_count > 0:
+            if y1 == start_row and slow_count > 0:
                 if x1 == x2 and abs(y2 - y1) == 2:
                     return {
                         "success": False,
@@ -120,14 +120,21 @@ class Board:
             captured_piece = self.grid[capture_y][x2]
             self.grid[capture_y][x2] = None
 
+        is_castling_move = (
+            piece.name == "K"
+            and abs(x2 - x1) == 2
+            and y1 == y2
+            and self._can_castle(piece.color, x1, y1, x2)
+        )
 
-        if piece.name == "K" and abs(x2 - x1) == 2:
+        if is_castling_move:
             if x2 > x1:
                 rook_from_x, rook_to_x = 7, 5
                 self.rook_moved[piece.color]["right"] = True
             else:
                 rook_from_x, rook_to_x = 0, 3
                 self.rook_moved[piece.color]["left"] = True
+
             self.grid[y1][rook_to_x] = self.grid[y1][rook_from_x]
             self.grid[y1][rook_from_x] = None
             self.king_moved[piece.color] = True
@@ -252,19 +259,11 @@ class Board:
             return (adx == ady or x1 == x2 or y1 == y2) and self._clear(x1, y1, x2, y2)
 
         if piece.name == "K":
-    # 원래 1칸 이동
+            # 기본 1칸 이동
             if adx <= 1 and ady <= 1:
                 return True
 
-            # 캐슬링 형태의 가로 2칸은 먼저 처리
-            if ady == 0 and adx == 2:
-                row = 7 if piece.color == "W" else 0
-
-                # 시작 위치(왕 자리)에서의 가로 2칸은 무조건 캐슬링 판정으로만 처리
-                if (x1, y1) == (4, row):
-                    return self._can_castle(piece.color, x1, y1, x2)
-
-            # 왕권 강화: 상하좌우로 정확히 2칸
+            # 가로 2칸 / 세로 2칸은 왕권 강화 이동 후보
             if self.effects[piece.color].get("king_buff"):
                 if (adx == 2 and ady == 0) or (adx == 0 and ady == 2):
                     mid_x = x1 + (dx // 2)
@@ -274,6 +273,10 @@ class Board:
                         return False
 
                     return True
+
+            # 왕권 강화가 없을 때만 캐슬링 허용
+            if ady == 0 and adx == 2:
+                return self._can_castle(piece.color, x1, y1, x2)
 
             return False
 
