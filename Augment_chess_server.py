@@ -1,5 +1,5 @@
 import time
-from fastapi import WebSocket, WebSocketDisconnect
+from fastapi import WebSocket, WebSocketDisconnect, Body
 import json
 from pathlib import Path
 from uuid import uuid4
@@ -132,6 +132,17 @@ def find_augment_by_id(augment_id: str):
             return augment
     return None
 
+def piece_value(name: str) -> int:
+    if name == "P":
+        return 1
+    if name in ("N", "B"):
+        return 3
+    if name == "R":
+        return 5
+    if name == "Q":
+        return 9
+    return 0
+
 def serialize_augment(augment):
     return {
         "id": augment["id"],
@@ -191,7 +202,7 @@ async def join_room(room_id: str, data: dict = Body(...)):
 
         room["augment"]["choices"]["W"] = [
             serialize_augment(find_augment_by_id("guardian_of_balance")),
-            serialize_augment(find_augment_by_id("king_buff")),
+            serialize_augment(find_augment_by_id("Augment_countdown")),
             serialize_augment(find_augment_by_id("pawn_supply")),
         ]
 
@@ -474,3 +485,57 @@ async def select_augment(room_id: str, req: AugmentSelectRequest):
             "type": "update",
             "state": build_state(room)
         })
+@app.post("/rooms/{room_id}/guardian/select_self")
+async def guardian_select_self(room_id: str, data: dict = Body(...)):
+    if room_id not in rooms:
+        raise HTTPException(status_code=404, detail="room not found")
+
+    room = rooms[room_id]
+    guardian = room["guardian"]
+
+    if not guardian["active"]:
+        raise HTTPException(status_code=400, detail="guardian not active")
+
+    player_id = data.get("player_id")
+    x = data.get("x")
+    y = data.get("y")
+
+    if player_id is None:
+        raise HTTPException(status_code=400, detail="player_id required")
+    if x is None or y is None:
+        raise HTTPException(status_code=400, detail="x, y required")
+
+    color = get_player_color(room, player_id)
+    if color is None:
+        raise HTTPException(status_code=403, detail="only players can use guardian")
+
+    if guardian["current"] != color:
+        raise HTTPException(status_code=400, detail="not your guardian turn")
+
+    board = room["board"]
+
+    if not board.in_bounds(x, y):
+        raise HTTPException(status_code=400, detail="out of bounds")
+
+    piece = board.grid[y][x]
+    if piece is None:
+        raise HTTPException(status_code=400, detail="piece not found")
+
+    if piece.color != color:
+        raise HTTPException(status_code=400, detail="must select your own piece")
+
+    if piece.name == "K":
+        raise HTTPException(status_code=400, detail="king cannot be selected")
+
+    guardian["selected_self"] = [x, y]
+    guardian["selected_enemy"] = []
+    guardian["max_score"] = piece_value(piece.name)
+    guardian["score"] = 0
+    guardian["start_time"] = time.time()
+
+    await broadcast(room_id, {
+        "type": "update",
+        "state": build_state(room)
+    })
+
+    return {"success": True, "state": build_state(room)}
