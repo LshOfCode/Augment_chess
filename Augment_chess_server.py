@@ -540,3 +540,66 @@ async def guardian_select_self(room_id: str, data: dict = Body(...)):
     })
 
     return {"success": True, "state": build_state(room)}
+
+@app.post("/rooms/{room_id}/guardian/confirm")
+async def guardian_confirm(room_id: str, data: dict = Body(...)):
+    if room_id not in rooms:
+        raise HTTPException(status_code=404, detail="room not found")
+
+    room = rooms[room_id]
+    guardian = room["guardian"]
+
+    if not guardian["active"]:
+        raise HTTPException(status_code=400, detail="guardian not active")
+
+    player_id = data.get("player_id")
+    if not player_id:
+        raise HTTPException(status_code=400, detail="player_id required")
+
+    color = get_player_color(room, player_id)
+    if color is None:
+        raise HTTPException(status_code=403, detail="only players can confirm guardian")
+
+    if guardian["current"] != color:
+        raise HTTPException(status_code=400, detail="not your guardian turn")
+
+    if not guardian["selected_self"]:
+        raise HTTPException(status_code=400, detail="must select self piece first")
+
+    board = room["board"]
+
+    sx, sy = guardian["selected_self"]
+    if board.in_bounds(sx, sy):
+        board.grid[sy][sx] = None
+
+    for ex, ey in guardian["selected_enemy"]:
+        if board.in_bounds(ex, ey):
+            board.grid[ey][ex] = None
+
+    if guardian["queue"] and guardian["queue"][0] == color:
+        guardian["queue"].pop(0)
+    else:
+        guardian["queue"] = [c for c in guardian["queue"] if c != color]
+
+    guardian["selected_self"] = None
+    guardian["selected_enemy"] = []
+    guardian["score"] = 0
+    guardian["max_score"] = 0
+
+    if guardian["queue"]:
+        guardian["current"] = guardian["queue"][0]
+        guardian["start_time"] = time.time()
+    else:
+        guardian["active"] = False
+        guardian["current"] = None
+        guardian["start_time"] = None
+
+        room["time"]["last_update"] = time.time()
+        room["time"]["running"] = room["board"].turn
+
+    await broadcast(room_id, {
+        "type": "update",
+        "state": build_state(room)
+    })
+
+    return {"success": True, "state": build_state(room)}

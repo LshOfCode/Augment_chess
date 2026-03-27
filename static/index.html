@@ -382,6 +382,16 @@
             z-index: 1;
         }
 
+        .guardian-ring {
+            width: 54px;
+            height: 54px;
+            border-radius: 50%;
+            border: 4px solid orange;
+            box-sizing: border-box;
+            position: absolute;
+            z-index: 1;
+        }
+
         img {
             width: 52px;
             height: 52px;
@@ -1492,7 +1502,25 @@
                             img.ondragstart = () => false;
                             cell.appendChild(img);
                         }
+                        const guardian = currentState?.guardian;
 
+                        if (guardian?.active) {
+                            const selfPos = guardian.selected_self;
+                            const enemyList = guardian.selected_enemy || [];
+
+                            const isSelfSelected =
+                                selfPos &&
+                                selfPos[0] === x &&
+                                selfPos[1] === y;
+
+                            const isEnemySelected = enemyList.some(pos => pos[0] === x && pos[1] === y);
+
+                            if (isSelfSelected || isEnemySelected) {
+                                const ring = document.createElement("div");
+                                ring.className = "guardian-ring";
+                                cell.appendChild(ring);
+                            }
+                        }
                         boardDiv.appendChild(cell);
                     }
                     updateGuardianUI();
@@ -2237,6 +2265,13 @@
 
                         const data = await res.json();
 
+                        if (!res.ok) {
+                            console.log("guardian select_self fail:", data);
+                            const status = document.getElementById("status");
+                            if (status) status.innerText = data.detail || "가디언 자기 기물 선택 실패";
+                            return;
+                        }
+
                         if (data.state) {
                             renderBoardFromState(data.state);
                         }
@@ -2247,6 +2282,35 @@
                 }
 
                 console.log("이제 상대 기물 선택 단계");
+            }
+
+            async function confirmGuardian() {
+                if (!isMyGuardianTurn()) return;
+
+                try {
+                    const res = await fetch(`${API_BASE}/rooms/${roomId}/guardian/confirm`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            player_id: playerId
+                        })
+                    });
+
+                    const data = await res.json();
+
+                    if (!res.ok) {
+                        console.log("guardian confirm fail:", data);
+                        const status = document.getElementById("status");
+                        if (status) status.innerText = data.detail || "가디언 확인 실패";
+                        return;
+                    }
+
+                    if (data.state) {
+                        renderBoardFromState(data.state);
+                    }
+                } catch (err) {
+                    console.error(err);
+                }
             }
 
         </script>
