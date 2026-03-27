@@ -89,45 +89,46 @@ input {
 
 /* ===== 메인 레이아웃 ===== */
 #gameArea {
-    width: min(100%, 1280px);
-    min-height: 600px;
-    display: grid;
-    grid-template-columns: 220px 564px 110px;
-    column-gap: 44px;
-    justify-content: center;
-    align-items: center;
+    position: relative;
+    width: 100%;
+    height: 600px;
 }
 
 #leftAugmentColumn {
-    width: 220px;
+    position: absolute;
+    top: 50%;
+    left: calc(50% - 600px); /* ← 여기로 거리 조절 */
+    transform: translateY(-50%);
+
+    width: 300px;
     height: 564px;
+
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    align-items: center;
 }
 
 .augment-group {
-    width: 220px;
+    width: 320px;
     display: grid;
-    grid-template-columns: repeat(3, 64px);
-    grid-template-rows: repeat(2, 92px);
-    column-gap: 10px;
-    row-gap: 12px;
-    justify-content: center;
+    grid-template-columns: repeat(3, 82px);
+    grid-template-rows: repeat(2, 118px);
+    column-gap: 12px;
+    row-gap: 14px;
+    justify-content: start;
 }
 
 .owned-augment-slot {
-    width: 64px;
-    height: 92px;
+    width: 82px;
+    height: 118px;
     border: 3px solid rgba(255, 255, 255, 0.35);
-    border-radius: 16px;
+    border-radius: 18px;
     background: rgba(255, 255, 255, 0.04);
     box-sizing: border-box;
     cursor: default;
     position: relative;
     overflow: hidden;
-    padding: 5px;
+    padding: 6px;
 }
 
 .owned-augment-slot.filled {
@@ -148,10 +149,10 @@ input {
 
 .owned-augment-mini-title {
     position: absolute;
-    top: 5px;
-    left: 5px;
-    right: 5px;
-    font-size: 9px;
+    top: 6px;
+    left: 6px;
+    right: 6px;
+    font-size: 10px;
     font-weight: 900;
     line-height: 1.05;
     word-break: keep-all;
@@ -164,15 +165,15 @@ input {
     left: 4px;
     right: 4px;
     bottom: 4px;
-    top: 24px;
+    top: 28px;
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
 .owned-augment-mini-icon {
-    width: 42px;
-    height: 42px;
+    width: 50px;
+    height: 50px;
     object-fit: contain;
     pointer-events: none;
 }
@@ -265,13 +266,12 @@ input {
 
 /* ===== 보드 ===== */
 #boardWrap {
-    position: relative;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
     width: 564px;
     height: 564px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    isolation: isolate;
 }
 
 #board {
@@ -354,15 +354,17 @@ img {
 
 /* ===== 오른쪽 시계 ===== */
 #rightSidePanel {
-    width: 110px;
+    position: absolute;
+    top: 50%;
+    left: calc(50% + 320px); /* ← 이걸로 거리 조절 */
+    transform: translateY(-50%);
+
+    width: 130px;
     height: 564px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
 }
 
 #clockPanel {
-    width: 110px;
+    width: 130px;
     height: 564px;
     display: flex;
     flex-direction: column;
@@ -373,11 +375,10 @@ img {
 .clock-box {
     font-size: 18px;
     font-weight: bold;
-    padding: 10px 12px;
-    min-width: 92px;
+    padding: 12px 16px;
+    min-width: 104px;
     text-align: center;
 }
-
 /* ===== 게임오버 모달 ===== */
 #gameOverModal {
     position: absolute;
@@ -668,57 +669,61 @@ img {
 /* ===== 반응형 ===== */
 @media (max-width: 1280px) {
     #gameArea {
-        width: min(100%, 1180px);
-        grid-template-columns: 200px 564px 100px;
-        column-gap: 28px;
+        width: min(100%, 1320px);
+        grid-template-columns: 280px 564px 118px;
+        column-gap: 42px;
     }
 
     #leftAugmentColumn {
-        width: 200px;
+        width: 280px;
+        align-items: flex-start;
+        padding-left: 6px;
+        box-sizing: border-box;
     }
 
     .augment-group {
-        width: 200px;
-        grid-template-columns: repeat(3, 58px);
-        grid-template-rows: repeat(2, 84px);
-        column-gap: 8px;
-        row-gap: 10px;
+        width: 280px;
+        grid-template-columns: repeat(3, 74px);
+        grid-template-rows: repeat(2, 106px);
+        column-gap: 10px;
+        row-gap: 12px;
+        justify-content: start;
     }
 
     .owned-augment-slot {
-        width: 58px;
-        height: 84px;
-        padding: 4px;
+        width: 74px;
+        height: 106px;
+        padding: 5px;
     }
 
     .owned-augment-mini-title {
-        font-size: 8px;
-        top: 4px;
-        left: 4px;
-        right: 4px;
+        font-size: 9px;
+        top: 5px;
+        left: 5px;
+        right: 5px;
     }
 
     .owned-augment-mini-art {
-        top: 20px;
-        left: 3px;
-        right: 3px;
-        bottom: 3px;
+        top: 24px;
+        left: 4px;
+        right: 4px;
+        bottom: 4px;
     }
 
     .owned-augment-mini-icon {
-        width: 36px;
-        height: 36px;
+        width: 44px;
+        height: 44px;
     }
 
     #rightSidePanel,
     #clockPanel {
-        width: 100px;
+        width: 118px;
     }
 
     .clock-box {
-        min-width: 84px;
-        font-size: 17px;
-        padding: 10px 10px;
+        min-width: 90px;
+        font-size: 18px;
+        padding: 10px 12px;
     }
 }
 
