@@ -752,14 +752,31 @@
             function hideAugmentOverlay() {
                 const overlay = document.getElementById("augmentOverlay");
                 const cards = document.getElementById("augmentCards");
-
-                overlay.style.display = "none";
-                cards.innerHTML = "";
+                const bar = document.getElementById("augmentBar");
 
                 clearAugmentTimer();
-                setAugmentWaiting(false);
+
+                if (augmentCloseTimeout) {
+                    clearTimeout(augmentCloseTimeout);
+                    augmentCloseTimeout = null;
+                }
+
+                overlay.classList.remove("show");
+                overlay.style.display = "";
+
+                cards.innerHTML = "";
+
+                if (bar) {
+                    bar.style.transition = "none";
+                    bar.style.width = "100%";
+                }
 
                 augmentOpen = false;
+                augmentLocked = false;
+                selectedAugmentIndex = null;
+
+                const statusEl = document.getElementById("augmentStatus");
+                if (statusEl) statusEl.innerText = "증강을 선택하세요";
             }
 
             function updateRematchButton(rematch) {
@@ -1518,7 +1535,8 @@
                 augmentOpen = true;
                 augmentLocked = false;
                 selectedAugmentIndex = null;
-
+                
+                overlay.style.display = "";
                 overlay.classList.add("show");
                 setAugmentBarTier(tier);
 
