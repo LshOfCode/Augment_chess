@@ -7,829 +7,857 @@
     <title>Augment_Chess</title>
     <style>
         #topbar,
-#colorBox,
-#status,
-#gameArea,
-#boardWrap,
-#clockPanel,
-.clock-box,
-#modalTitle,
-.modal-card,
-button {
-    -webkit-user-select: none;
-    user-select: none;
-    -webkit-user-drag: none;
-}
-
-#roomBox {
-    -webkit-user-select: text;
-    user-select: text;
-}
-
-body {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    margin: 0;
-    padding: 24px 16px 20px;
-    min-height: 100vh;
-    box-sizing: border-box;
-    background: #222;
-    color: white;
-    font-family: Arial, sans-serif;
-    overflow-x: hidden;
-}
-
-#topbar {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    margin-bottom: 14px;
-    flex-wrap: wrap;
-    justify-content: center;
-}
-
-#roomBox,
-#colorBox,
-#status,
-.clock-box,
-.modal-card {
-    background: white;
-    color: black;
-    border-radius: 10px;
-}
-
-#roomBox,
-#colorBox {
-    font-size: 16px;
-    padding: 10px 14px;
-}
-
-#status {
-    font-size: 20px;
-    font-weight: bold;
-    padding: 10px 18px;
-    min-width: 220px;
-    text-align: center;
-    margin-bottom: 16px;
-}
-
-button,
-input {
-    font-size: 16px;
-    padding: 8px 12px;
-    border-radius: 8px;
-    border: none;
-}
-
-input {
-    -webkit-user-select: text;
-    user-select: text;
-}
-
-/* ===== 메인 레이아웃 ===== */
-#gameArea {
-    position: relative;
-    width: 100%;
-    height: 600px;
-}
-
-#leftAugmentColumn {
-    position: absolute;
-    top: 50%;
-    left: calc(50% - 600px); /* ← 여기로 거리 조절 */
-    transform: translateY(-50%);
-
-    width: 300px;
-    height: 564px;
-
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-}
-
-.augment-group {
-    width: 320px;
-    display: grid;
-    grid-template-columns: repeat(3, 82px);
-    grid-template-rows: repeat(2, 118px);
-    column-gap: 12px;
-    row-gap: 14px;
-    justify-content: start;
-}
-
-.owned-augment-slot {
-    width: 82px;
-    height: 118px;
-    border: 3px solid rgba(255, 255, 255, 0.35);
-    border-radius: 18px;
-    background: rgba(255, 255, 255, 0.04);
-    box-sizing: border-box;
-    cursor: default;
-    position: relative;
-    overflow: hidden;
-    padding: 6px;
-}
-
-.owned-augment-slot.filled {
-    cursor: pointer;
-}
-
-.owned-augment-slot.silver {
-    background: linear-gradient(180deg, #5f656d 0%, #8b939d 28%, #bbc3cc 62%, #eef2f6 100%);
-}
-
-.owned-augment-slot.gold {
-    background: linear-gradient(180deg, #8c6700 0%, #c99708 26%, #f0c840 58%, #fff0b0 100%);
-}
-
-.owned-augment-slot.diamond {
-    background: linear-gradient(180deg, #0a5f7f 0%, #1494c0 26%, #43c9ee 58%, #dcfcff 100%);
-}
-
-.owned-augment-mini-title {
-    position: absolute;
-    top: 6px;
-    left: 6px;
-    right: 6px;
-    font-size: 10px;
-    font-weight: 900;
-    line-height: 1.05;
-    word-break: keep-all;
-    color: #111;
-    z-index: 2;
-}
-
-.owned-augment-mini-art {
-    position: absolute;
-    left: 4px;
-    right: 4px;
-    bottom: 4px;
-    top: 28px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.owned-augment-mini-icon {
-    width: 50px;
-    height: 50px;
-    object-fit: contain;
-    pointer-events: none;
-}
-
-/* ===== 먹은 증강 상세 보기 ===== */
-#ownedAugmentOverlay {
-    position: fixed;
-    inset: 0;
-    display: none;
-    justify-content: center;
-    align-items: center;
-    background: rgba(0, 0, 0, 0.78);
-    z-index: 1200;
-}
-
-#ownedAugmentOverlay.show {
-    display: flex;
-}
-
-#ownedAugmentCard {
-    width: 340px;
-    min-height: 500px;
-    border-radius: 24px;
-    padding: 24px;
-    box-sizing: border-box;
-    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
-}
-
-#ownedAugmentCard.silver {
-    background: linear-gradient(180deg, #5f656d 0%, #8b939d 28%, #bbc3cc 62%, #eef2f6 100%);
-    color: #11161b;
-}
-
-#ownedAugmentCard.gold {
-    background: linear-gradient(180deg, #8c6700 0%, #c99708 26%, #f0c840 58%, #fff0b0 100%);
-    color: #221700;
-}
-
-#ownedAugmentCard.diamond {
-    background: linear-gradient(180deg, #0a5f7f 0%, #1494c0 26%, #43c9ee 58%, #dcfcff 100%);
-    color: #07181d;
-}
-
-#ownedAugmentClose {
-    position: fixed;
-    top: 28px;
-    right: 34px;
-    width: 68px;
-    height: 68px;
-    border: none;
-    border-radius: 16px;
-    font-size: 36px;
-    font-weight: bold;
-    background: rgba(255, 255, 255, 0.18);
-    color: white;
-    cursor: pointer;
-}
-
-#ownedAugmentTitle {
-    font-size: 42px;
-    font-weight: 900;
-    line-height: 1.05;
-    margin-bottom: 24px;
-    word-break: keep-all;
-}
-
-#ownedAugmentDesc {
-    font-size: 23px;
-    font-weight: 800;
-    line-height: 1.35;
-    background: rgba(255, 255, 255, 0.88);
-    border-radius: 18px;
-    padding: 18px;
-    color: #222;
-}
-
-#ownedAugmentArt {
-    height: 180px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 20px;
-}
-
-.owned-augment-big-icon {
-    max-width: 100%;
-    max-height: 100%;
-    object-fit: contain;
-}
-
-/* ===== 보드 ===== */
-#boardWrap {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    width: 564px;
-    height: 564px;
-}
-
-#board {
-    display: grid;
-    grid-template-columns: repeat(8, 70px);
-    grid-template-rows: repeat(8, 70px);
-    width: 560px;
-    height: 560px;
-    border: 2px solid white;
-    box-sizing: content-box;
-    position: relative;
-    z-index: 1;
-}
-
-.cell {
-    width: 70px;
-    height: 70px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    position: relative;
-}
-
-.white {
-    background: #f0d9b5;
-}
-
-.black {
-    background: #b58863;
-}
-
-.selected {
-    box-shadow: inset 0 0 0 4px red;
-}
-
-.move-dot {
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    background: rgba(0, 255, 0, 0.85);
-    position: absolute;
-}
-
-.capture-ring {
-    width: 52px;
-    height: 52px;
-    border-radius: 50%;
-    border: 4px solid orange;
-    box-sizing: border-box;
-    position: absolute;
-}
-
-.check-king {
-    width: 58px;
-    height: 58px;
-    border-radius: 50%;
-    background: rgba(255, 0, 0, 0.45);
-    position: absolute;
-    z-index: 1;
-}
-
-.winner-king {
-    width: 58px;
-    height: 58px;
-    border-radius: 50%;
-    background: rgba(144, 238, 144, 0.8);
-    position: absolute;
-    z-index: 1;
-}
-
-img {
-    width: 52px;
-    height: 52px;
-    pointer-events: none;
-    position: relative;
-    z-index: 2;
-    -webkit-user-drag: none;
-    user-select: none;
-}
-
-/* ===== 오른쪽 시계 ===== */
-#rightSidePanel {
-    position: absolute;
-    top: 50%;
-    left: calc(50% + 320px); /* ← 이걸로 거리 조절 */
-    transform: translateY(-50%);
-
-    width: 130px;
-    height: 564px;
-}
-
-#clockPanel {
-    width: 130px;
-    height: 564px;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.clock-box {
-    font-size: 18px;
-    font-weight: bold;
-    padding: 12px 16px;
-    min-width: 104px;
-    text-align: center;
-}
-/* ===== 게임오버 모달 ===== */
-#gameOverModal {
-    position: absolute;
-    inset: 0;
-    display: none;
-    justify-content: center;
-    align-items: center;
-    background: rgba(0, 0, 0, 0.45);
-    z-index: 100;
-}
-
-#gameOverModal.show {
-    display: flex;
-}
-
-.modal-card {
-    padding: 20px 24px;
-    min-width: 240px;
-    text-align: center;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
-    position: relative;
-    z-index: 101;
-}
-
-#modalTitle {
-    font-size: 24px;
-    font-weight: bold;
-    margin-bottom: 16px;
-}
-
-.modal-actions {
-    display: flex;
-    justify-content: center;
-    gap: 12px;
-}
-
-.modal-actions button {
-    min-width: 96px;
-}
-
-/* ===== 증강 오버레이 ===== */
-#augmentOverlay {
-    position: fixed;
-    inset: 0;
-    display: none;
-    justify-content: center;
-    align-items: center;
-    background: rgba(0, 0, 0, 0.78);
-    backdrop-filter: blur(4px);
-    z-index: 1000;
-}
-
-#augmentOverlay.show {
-    display: flex;
-}
-
-#augmentPanel {
-    position: relative;
-    width: 100vw;
-    height: 100vh;
-    pointer-events: auto;
-}
-
-#augmentStatus {
-    position: absolute;
-    top: 10px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: white;
-    color: black;
-    border-radius: 12px;
-    padding: 12px 22px;
-    font-size: 22px;
-    font-weight: bold;
-    min-width: 280px;
-    text-align: center;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
-    z-index: 2;
-}
-
-#augmentTimer {
-    position: absolute;
-    top: 150px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: min(820px, 72vw);
-    height: 18px;
-    background: rgba(255, 255, 255, 0.16);
-    border-radius: 999px;
-    overflow: hidden;
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
-    z-index: 2;
-}
-
-#augmentBar {
-    width: 100%;
-    height: 100%;
-    border-radius: 999px;
-    transform-origin: left center;
-}
-
-#augmentBar.silver {
-    background: linear-gradient(90deg, #6c6f76 0%, #9197a3 40%, #c4cad2 70%, #eceff4 100%);
-}
-
-#augmentBar.gold {
-    background: linear-gradient(90deg, #8f6a00 0%, #c89a06 35%, #f2c94c 68%, #fff0a8 100%);
-}
-
-#augmentBar.diamond {
-    background: linear-gradient(90deg, #056d91 0%, #1497c7 35%, #37c4ea 70%, #d5fbff 100%);
-}
-
-#augmentCards {
-    width: 100%;
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
-    gap: 52px;
-    flex-wrap: nowrap;
-    margin-top: 240px;
-}
-
-.augment-card {
-    width: 250px;
-    height: 420px;
-    border-radius: 24px;
-    position: relative;
-    overflow: hidden;
-    cursor: pointer;
-    border: 3px solid rgba(255, 255, 255, 0.24);
-    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.34);
-    transition:
-        transform 0.38s cubic-bezier(0.18, 0.9, 0.25, 1.28),
-        box-shadow 0.22s ease,
-        border-color 0.22s ease,
-        filter 0.22s ease,
-        opacity 0.30s ease;
-    transform: translateY(34px) scale(0.68);
-    opacity: 0;
-    filter: saturate(0.96);
-    color: #201500;
-    padding: 16px;
-    box-sizing: border-box;
-    display: flex;
-    flex-direction: column;
-}
-
-.augment-card.show {
-    transform: translateY(0) scale(1);
-    opacity: 1;
-}
-
-.augment-card:hover {
-    transform: translateY(-8px) scale(1.03);
-    box-shadow: 0 24px 54px rgba(0, 0, 0, 0.48);
-    border-color: rgba(255, 255, 255, 0.44);
-    filter: saturate(1.03);
-}
-
-.augment-card.disabled {
-    pointer-events: none;
-    opacity: 0.65;
-    filter: grayscale(0.15);
-}
-
-.augment-card.selected-card {
-    outline: 4px solid rgba(255, 255, 255, 0.95);
-    transform: translateY(-10px) scale(1.06);
-    box-shadow:
-        0 0 0 3px rgba(255, 255, 255, 0.18),
-        0 0 26px rgba(255, 255, 255, 0.35),
-        0 22px 48px rgba(0, 0, 0, 0.48);
-    filter: saturate(1.12) brightness(1.04);
-}
-
-.augment-card::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background:
-        radial-gradient(circle at top center, rgba(255, 255, 255, 0.20), transparent 34%),
-        linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent 28%);
-    pointer-events: none;
-}
-
-.augment-card::after {
-    content: "";
-    position: absolute;
-    inset: -18%;
-    background: radial-gradient(circle, rgba(255, 255, 255, 0.16), transparent 58%);
-    opacity: 0;
-    transition: opacity 0.30s ease;
-    pointer-events: none;
-}
-
-.augment-card.show::after {
-    opacity: 1;
-}
-
-.augment-card.silver {
-    background: linear-gradient(180deg, #5f656d 0%, #8b939d 28%, #bbc3cc 62%, #eef2f6 100%);
-    color: #11161b;
-}
-
-.augment-card.gold {
-    background: linear-gradient(180deg, #8c6700 0%, #c99708 26%, #f0c840 58%, #fff0b0 100%);
-    color: #221700;
-}
-
-.augment-card.diamond {
-    background: linear-gradient(180deg, #0a5f7f 0%, #1494c0 26%, #43c9ee 58%, #dcfcff 100%);
-    color: #07181d;
-}
-
-.augment-card-header,
-.augment-tier-badge,
-.augment-card-index {
-    display: none;
-}
-
-.augment-card-body {
-    position: relative;
-    z-index: 1;
-    display: grid;
-    grid-template-rows: 64px 1fr 110px;
-    row-gap: 16px;
-    height: 100%;
-    padding: 0;
-}
-
-.augment-card-title {
-    font-size: 27px;
-    font-weight: 900;
-    line-height: 1.05;
-    word-break: keep-all;
-    letter-spacing: -0.8px;
-    margin: 0;
-    white-space: pre-line;
-    display: flex;
-    align-items: flex-start;
-    justify-content: flex-start;
-}
-
-.augment-card-desc {
-    font-size: 17px;
-    font-weight: 900;
-    line-height: 1.18;
-    word-break: keep-all;
-    letter-spacing: -0.4px;
-    color: #2a1d00;
-    background: rgba(255, 255, 255, 0.92);
-    border-radius: 18px;
-    padding: 14px;
-    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.55);
-    margin: 0;
-    white-space: pre-line;
-    display: flex;
-    align-items: flex-start;
-}
-
-.augment-card-art {
-    border-radius: 18px;
-    background: rgba(255, 255, 255, 0.06);
-    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.10);
-    min-height: 0;
-}
-
-.augment-auto-text {
-    font-size: 14px;
-    color: rgba(255, 255, 255, 0.92);
-    text-align: center;
-    margin-top: 2px;
-}
-
-#augmentDebugBtn {
-    position: fixed;
-    right: 14px;
-    bottom: 14px;
-    z-index: 30;
-    opacity: 0.6;
-}
-
-#augmentDebugBtn:hover {
-    opacity: 1;
-}
-
-/* ===== 반응형 ===== */
-@media (max-width: 1280px) {
-    #gameArea {
-        width: min(100%, 1320px);
-        grid-template-columns: 280px 564px 118px;
-        column-gap: 42px;
-    }
-
-    #leftAugmentColumn {
-        width: 280px;
-        align-items: flex-start;
-        padding-left: 6px;
-        box-sizing: border-box;
-    }
-
-    .augment-group {
-        width: 280px;
-        grid-template-columns: repeat(3, 74px);
-        grid-template-rows: repeat(2, 106px);
-        column-gap: 10px;
-        row-gap: 12px;
-        justify-content: start;
-    }
-
-    .owned-augment-slot {
-        width: 74px;
-        height: 106px;
-        padding: 5px;
-    }
-
-    .owned-augment-mini-title {
-        font-size: 9px;
-        top: 5px;
-        left: 5px;
-        right: 5px;
-    }
-
-    .owned-augment-mini-art {
-        top: 24px;
-        left: 4px;
-        right: 4px;
-        bottom: 4px;
-    }
-
-    .owned-augment-mini-icon {
-        width: 44px;
-        height: 44px;
-    }
-
-    #rightSidePanel,
-    #clockPanel {
-        width: 118px;
-    }
-
-    .clock-box {
-        min-width: 90px;
-        font-size: 18px;
-        padding: 10px 12px;
-    }
-}
-
-@media (max-width: 900px) {
-    #gameArea {
-        width: 100%;
-        min-height: auto;
-        display: flex;
-        flex-direction: column;
-        gap: 18px;
-    }
-
-    #leftAugmentColumn,
-    #rightSidePanel {
-        width: 100%;
-        height: auto;
-    }
-
-    #leftAugmentColumn {
-        order: 2;
-        gap: 18px;
-    }
-
-    .augment-group {
-        width: 100%;
-        grid-template-columns: repeat(3, 64px);
-        grid-template-rows: repeat(2, 92px);
-        justify-content: center;
-    }
-
-    .owned-augment-slot {
-        width: 64px;
-        height: 92px;
-    }
-
-    #boardWrap {
-        order: 1;
-        width: auto;
-        height: auto;
-    }
-
-    #rightSidePanel {
-        order: 3;
-    }
-
-    #clockPanel {
-        height: auto;
-        width: 100%;
-        flex-direction: row;
-        justify-content: center;
-        gap: 12px;
-    }
-
-    #board {
-        grid-template-columns: repeat(8, min(11vw, 56px));
-        grid-template-rows: repeat(8, min(11vw, 56px));
-        width: auto;
-        height: auto;
-    }
-
-    .cell {
-        width: min(11vw, 56px);
-        height: min(11vw, 56px);
-    }
-
-    img {
-        width: min(8vw, 42px);
-        height: min(8vw, 42px);
-    }
-
-    #augmentStatus {
-        top: 52px;
-        min-width: min(88vw, 360px);
-        font-size: 22px;
-        padding: 14px 22px;
-    }
-
-    #augmentTimer {
-        top: 126px;
-        width: min(88vw, 820px);
-    }
-
-    #augmentCards {
-        margin-top: 200px;
-        flex-direction: column;
-        align-items: center;
-        gap: 18px;
-    }
-
-    .augment-card {
-        width: min(84vw, 260px);
-        height: 390px;
-    }
-
-    .augment-card-body {
-        grid-template-rows: 66px 1fr 110px;
-    }
-
-    .augment-card-title {
-        font-size: 26px;
-    }
-
-    .augment-card-desc {
-        font-size: 16px;
-    }
-}
+        #colorBox,
+        #status,
+        #gameArea,
+        #boardWrap,
+        #clockPanel,
+        .clock-box,
+        #modalTitle,
+        .modal-card,
+        button {
+            -webkit-user-select: none;
+            user-select: none;
+            -webkit-user-drag: none;
+        }
+
+        #roomBox {
+            -webkit-user-select: text;
+            user-select: text;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            padding: 24px 16px 20px;
+            min-height: 100vh;
+            box-sizing: border-box;
+            background: #222;
+            color: white;
+            font-family: Arial, sans-serif;
+            overflow-x: hidden;
+        }
+
+        #topbar {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 14px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        #roomBox,
+        #colorBox,
+        #status,
+        .clock-box,
+        .modal-card {
+            background: white;
+            color: black;
+            border-radius: 10px;
+        }
+
+        #roomBox,
+        #colorBox {
+            font-size: 16px;
+            padding: 10px 14px;
+        }
+
+        #status {
+            font-size: 20px;
+            font-weight: bold;
+            padding: 10px 18px;
+            min-width: 220px;
+            text-align: center;
+            margin-bottom: 16px;
+        }
+
+        button,
+        input {
+            font-size: 16px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: none;
+        }
+
+        input {
+            -webkit-user-select: text;
+            user-select: text;
+        }
+
+        /* ===== 메인 레이아웃 ===== */
+        #gameArea {
+            position: relative;
+            width: 100%;
+            height: 600px;
+        }
+
+        #leftAugmentColumn {
+            z-index: 1;
+        }
+
+        #leftAugmentColumn {
+            position: absolute;
+            top: 50%;
+            left: calc(50% - 600px);
+            /* ← 여기로 거리 조절 */
+            transform: translateY(-50%);
+
+            width: 300px;
+            height: 564px;
+
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .augment-group {
+            width: 320px;
+            display: grid;
+            grid-template-columns: repeat(3, 82px);
+            grid-template-rows: repeat(2, 118px);
+            column-gap: 12px;
+            row-gap: 14px;
+            justify-content: start;
+        }
+
+        .owned-augment-slot {
+            width: 82px;
+            height: 118px;
+            border: 3px solid rgba(255, 255, 255, 0.35);
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.04);
+            box-sizing: border-box;
+            cursor: default;
+            position: relative;
+            overflow: hidden;
+            padding: 6px;
+        }
+
+        .owned-augment-slot.filled {
+            cursor: pointer;
+        }
+
+        .owned-augment-slot.silver {
+            background: linear-gradient(180deg, #5f656d 0%, #8b939d 28%, #bbc3cc 62%, #eef2f6 100%);
+        }
+
+        .owned-augment-slot.gold {
+            background: linear-gradient(180deg, #8c6700 0%, #c99708 26%, #f0c840 58%, #fff0b0 100%);
+        }
+
+        .owned-augment-slot.diamond {
+            background: linear-gradient(180deg, #0a5f7f 0%, #1494c0 26%, #43c9ee 58%, #dcfcff 100%);
+        }
+
+        .owned-augment-mini-title {
+            position: absolute;
+            top: 6px;
+            left: 6px;
+            right: 6px;
+            font-size: 10px;
+            font-weight: 900;
+            line-height: 1.05;
+            word-break: keep-all;
+            color: #111;
+            z-index: 2;
+        }
+
+        .owned-augment-mini-art {
+            position: absolute;
+            left: 4px;
+            right: 4px;
+            bottom: 4px;
+            top: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 14px;
+            overflow: hidden;
+        }
+
+        .owned-augment-mini-icon {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            pointer-events: none;
+            border-radius: 14px;
+        }
+
+        /* ===== 먹은 증강 상세 보기 ===== */
+        #augmentOverlay {
+            position: fixed;
+            inset: 0;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.82);
+            backdrop-filter: blur(4px);
+            z-index: 9999;
+        }
+
+        #ownedAugmentOverlay.show {
+            display: flex;
+        }
+
+        #ownedAugmentCard {
+            width: 340px;
+            min-height: 500px;
+            border-radius: 24px;
+            padding: 24px;
+            box-sizing: border-box;
+            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+        }
+
+        #ownedAugmentCard.silver {
+            background: linear-gradient(180deg, #5f656d 0%, #8b939d 28%, #bbc3cc 62%, #eef2f6 100%);
+            color: #11161b;
+        }
+
+        #ownedAugmentCard.gold {
+            background: linear-gradient(180deg, #8c6700 0%, #c99708 26%, #f0c840 58%, #fff0b0 100%);
+            color: #221700;
+        }
+
+        #ownedAugmentCard.diamond {
+            background: linear-gradient(180deg, #0a5f7f 0%, #1494c0 26%, #43c9ee 58%, #dcfcff 100%);
+            color: #07181d;
+        }
+
+        #ownedAugmentClose {
+            position: fixed;
+            top: 28px;
+            right: 34px;
+            width: 68px;
+            height: 68px;
+            border: none;
+            border-radius: 16px;
+            font-size: 36px;
+            font-weight: bold;
+            background: rgba(255, 255, 255, 0.18);
+            color: white;
+            cursor: pointer;
+        }
+
+        #ownedAugmentTitle {
+            font-size: 42px;
+            font-weight: 900;
+            line-height: 1.05;
+            margin-bottom: 24px;
+            word-break: keep-all;
+        }
+
+        #ownedAugmentDesc {
+            font-size: 23px;
+            font-weight: 800;
+            line-height: 1.35;
+            background: rgba(255, 255, 255, 0.88);
+            border-radius: 18px;
+            padding: 18px;
+            color: #222;
+        }
+
+        #ownedAugmentArt {
+            height: 180px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            border-radius: 20px;
+            overflow: hidden;
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        .owned-augment-big-icon {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 20px;
+        }
+
+        /* ===== 보드 ===== */
+        #boardWrap {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 564px;
+            height: 564px;
+            z-index: 1;
+        }
+
+        #board {
+            display: grid;
+            grid-template-columns: repeat(8, 70px);
+            grid-template-rows: repeat(8, 70px);
+            width: 560px;
+            height: 560px;
+            border: 2px solid white;
+            box-sizing: content-box;
+            position: relative;
+            z-index: 1;
+        }
+
+        .cell {
+            width: 70px;
+            height: 70px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        .white {
+            background: #f0d9b5;
+        }
+
+        .black {
+            background: #b58863;
+        }
+
+        .selected {
+            box-shadow: inset 0 0 0 4px red;
+        }
+
+        .move-dot {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: rgba(0, 255, 0, 0.85);
+            position: absolute;
+        }
+
+        .capture-ring {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            border: 4px solid orange;
+            box-sizing: border-box;
+            position: absolute;
+        }
+
+        .check-king {
+            width: 58px;
+            height: 58px;
+            border-radius: 50%;
+            background: rgba(255, 0, 0, 0.45);
+            position: absolute;
+            z-index: 1;
+        }
+
+        .winner-king {
+            width: 58px;
+            height: 58px;
+            border-radius: 50%;
+            background: rgba(144, 238, 144, 0.8);
+            position: absolute;
+            z-index: 1;
+        }
+
+        img {
+            width: 52px;
+            height: 52px;
+            pointer-events: none;
+            position: relative;
+            z-index: 2;
+            -webkit-user-drag: none;
+            user-select: none;
+        }
+
+        /* ===== 오른쪽 시계 ===== */
+        #rightSidePanel {
+            position: absolute;
+            top: 50%;
+            left: calc(50% + 320px);
+            transform: translateY(-50%);
+            width: 130px;
+            height: 564px;
+            z-index: 1;
+        }
+
+        #clockPanel {
+            width: 130px;
+            height: 564px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .clock-box {
+            font-size: 18px;
+            font-weight: bold;
+            padding: 12px 16px;
+            min-width: 104px;
+            text-align: center;
+        }
+
+        /* ===== 게임오버 모달 ===== */
+        #gameOverModal {
+            position: absolute;
+            inset: 0;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.45);
+            z-index: 100;
+        }
+
+        #gameOverModal.show {
+            display: flex;
+        }
+
+        .modal-card {
+            padding: 20px 24px;
+            min-width: 240px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+            position: relative;
+            z-index: 101;
+        }
+
+        #modalTitle {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 16px;
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+        }
+
+        .modal-actions button {
+            min-width: 96px;
+        }
+
+        /* ===== 증강 오버레이 ===== */
+        #augmentOverlay {
+            position: fixed;
+            inset: 0;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.78);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+        }
+
+        #augmentOverlay.show {
+            display: flex;
+        }
+
+        #augmentPanel {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: auto;
+            z-index: 10000;
+        }
+
+        #augmentStatus {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: white;
+            color: black;
+            border-radius: 12px;
+            padding: 12px 22px;
+            font-size: 22px;
+            font-weight: bold;
+            min-width: 280px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+            z-index: 2;
+        }
+
+        #augmentTimer {
+            position: absolute;
+            top: 150px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: min(820px, 72vw);
+            height: 18px;
+            background: rgba(255, 255, 255, 0.16);
+            border-radius: 999px;
+            overflow: hidden;
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+            z-index: 2;
+        }
+
+        #augmentBar {
+            width: 100%;
+            height: 100%;
+            border-radius: 999px;
+            transform-origin: left center;
+        }
+
+        #augmentBar.silver {
+            background: linear-gradient(90deg, #6c6f76 0%, #9197a3 40%, #c4cad2 70%, #eceff4 100%);
+        }
+
+        #augmentBar.gold {
+            background: linear-gradient(90deg, #8f6a00 0%, #c89a06 35%, #f2c94c 68%, #fff0a8 100%);
+        }
+
+        #augmentBar.diamond {
+            background: linear-gradient(90deg, #056d91 0%, #1497c7 35%, #37c4ea 70%, #d5fbff 100%);
+        }
+
+        #augmentCards {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 52px;
+            flex-wrap: nowrap;
+            margin-top: 240px;
+        }
+
+        .augment-card {
+            width: 250px;
+            height: 420px;
+            border-radius: 24px;
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+            border: 3px solid rgba(255, 255, 255, 0.24);
+            box-shadow: 0 16px 36px rgba(0, 0, 0, 0.34);
+            transition:
+                transform 0.38s cubic-bezier(0.18, 0.9, 0.25, 1.28),
+                box-shadow 0.22s ease,
+                border-color 0.22s ease,
+                filter 0.22s ease,
+                opacity 0.30s ease;
+            transform: translateY(34px) scale(0.68);
+            opacity: 0;
+            filter: saturate(0.96);
+            color: #201500;
+            padding: 16px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .augment-card.show {
+            transform: translateY(0) scale(1);
+            opacity: 1;
+        }
+
+        .augment-card:hover {
+            transform: translateY(-8px) scale(1.03);
+            box-shadow: 0 24px 54px rgba(0, 0, 0, 0.48);
+            border-color: rgba(255, 255, 255, 0.44);
+            filter: saturate(1.03);
+        }
+
+        .augment-card.disabled {
+            pointer-events: none;
+            opacity: 0.65;
+            filter: grayscale(0.15);
+        }
+
+        .augment-card.selected-card {
+            outline: 4px solid rgba(255, 255, 255, 0.95);
+            transform: translateY(-10px) scale(1.06);
+            box-shadow:
+                0 0 0 3px rgba(255, 255, 255, 0.18),
+                0 0 26px rgba(255, 255, 255, 0.35),
+                0 22px 48px rgba(0, 0, 0, 0.48);
+            filter: saturate(1.12) brightness(1.04);
+        }
+
+        .augment-card::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(circle at top center, rgba(255, 255, 255, 0.20), transparent 34%),
+                linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent 28%);
+            pointer-events: none;
+        }
+
+        .augment-card::after {
+            content: "";
+            position: absolute;
+            inset: -18%;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.16), transparent 58%);
+            opacity: 0;
+            transition: opacity 0.30s ease;
+            pointer-events: none;
+        }
+
+        .augment-card.show::after {
+            opacity: 1;
+        }
+
+        .augment-card.silver {
+            background: linear-gradient(180deg, #5f656d 0%, #8b939d 28%, #bbc3cc 62%, #eef2f6 100%);
+            color: #11161b;
+        }
+
+        .augment-card.gold {
+            background: linear-gradient(180deg, #8c6700 0%, #c99708 26%, #f0c840 58%, #fff0b0 100%);
+            color: #221700;
+        }
+
+        .augment-card.diamond {
+            background: linear-gradient(180deg, #0a5f7f 0%, #1494c0 26%, #43c9ee 58%, #dcfcff 100%);
+            color: #07181d;
+        }
+
+        .augment-card-header,
+        .augment-tier-badge,
+        .augment-card-index {
+            display: none;
+        }
+
+        .augment-card-body {
+            position: relative;
+            z-index: 1;
+            display: grid;
+            grid-template-rows: 64px 1fr 110px;
+            row-gap: 16px;
+            height: 100%;
+            padding: 0;
+        }
+
+        .augment-card-title {
+            font-size: 27px;
+            font-weight: 900;
+            line-height: 1.05;
+            word-break: keep-all;
+            letter-spacing: -0.8px;
+            margin: 0;
+            white-space: pre-line;
+            display: flex;
+            align-items: flex-start;
+            justify-content: flex-start;
+        }
+
+        .augment-card-desc {
+            font-size: 17px;
+            font-weight: 900;
+            line-height: 1.18;
+            word-break: keep-all;
+            letter-spacing: -0.4px;
+            color: #2a1d00;
+            background: rgba(255, 255, 255, 0.92);
+            border-radius: 18px;
+            padding: 14px;
+            box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.55);
+            margin: 0;
+            white-space: pre-line;
+            display: flex;
+            align-items: flex-start;
+        }
+
+        .augment-card-art {
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.06);
+            box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.10);
+            min-height: 0;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .augment-card-icon {
+            width: calc(100% - 24px);
+            height: calc(100% - 24px);
+            object-fit: cover;
+            border-radius: 16px;
+            display: block;
+        }
+
+        .augment-auto-text {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.92);
+            text-align: center;
+            margin-top: 2px;
+        }
+
+        #augmentDebugBtn {
+            position: fixed;
+            right: 14px;
+            bottom: 14px;
+            z-index: 30;
+            opacity: 0.6;
+        }
+
+        #augmentDebugBtn:hover {
+            opacity: 1;
+        }
+
+        /* ===== 반응형 ===== */
+        @media (max-width: 1280px) {
+            #gameArea {
+                width: min(100%, 1320px);
+                grid-template-columns: 280px 564px 118px;
+                column-gap: 42px;
+            }
+
+            #leftAugmentColumn {
+                width: 280px;
+                align-items: flex-start;
+                padding-left: 6px;
+                box-sizing: border-box;
+            }
+
+            .augment-group {
+                width: 280px;
+                grid-template-columns: repeat(3, 74px);
+                grid-template-rows: repeat(2, 106px);
+                column-gap: 10px;
+                row-gap: 12px;
+                justify-content: start;
+            }
+
+            .owned-augment-slot {
+                width: 74px;
+                height: 106px;
+                padding: 5px;
+            }
+
+            .owned-augment-mini-title {
+                font-size: 9px;
+                top: 5px;
+                left: 5px;
+                right: 5px;
+            }
+
+            .owned-augment-mini-art {
+                top: 24px;
+                left: 4px;
+                right: 4px;
+                bottom: 4px;
+            }
+
+            .owned-augment-mini-icon {
+                width: 44px;
+                height: 44px;
+            }
+
+            #rightSidePanel,
+            #clockPanel {
+                width: 118px;
+            }
+
+            .clock-box {
+                min-width: 90px;
+                font-size: 18px;
+                padding: 10px 12px;
+            }
+        }
+
+        @media (max-width: 900px) {
+            #gameArea {
+                width: 100%;
+                min-height: auto;
+                display: flex;
+                flex-direction: column;
+                gap: 18px;
+            }
+
+            #leftAugmentColumn,
+            #rightSidePanel {
+                width: 100%;
+                height: auto;
+            }
+
+            #leftAugmentColumn {
+                order: 2;
+                gap: 18px;
+            }
+
+            .augment-group {
+                width: 100%;
+                grid-template-columns: repeat(3, 64px);
+                grid-template-rows: repeat(2, 92px);
+                justify-content: center;
+            }
+
+            .owned-augment-slot {
+                width: 64px;
+                height: 92px;
+            }
+
+            #boardWrap {
+                order: 1;
+                width: auto;
+                height: auto;
+            }
+
+            #rightSidePanel {
+                order: 3;
+            }
+
+            #clockPanel {
+                height: auto;
+                width: 100%;
+                flex-direction: row;
+                justify-content: center;
+                gap: 12px;
+            }
+
+            #board {
+                grid-template-columns: repeat(8, min(11vw, 56px));
+                grid-template-rows: repeat(8, min(11vw, 56px));
+                width: auto;
+                height: auto;
+            }
+
+            .cell {
+                width: min(11vw, 56px);
+                height: min(11vw, 56px);
+            }
+
+            img {
+                width: min(8vw, 42px);
+                height: min(8vw, 42px);
+            }
+
+            #augmentStatus {
+                top: 52px;
+                min-width: min(88vw, 360px);
+                font-size: 22px;
+                padding: 14px 22px;
+            }
+
+            #augmentTimer {
+                top: 126px;
+                width: min(88vw, 820px);
+            }
+
+            #augmentCards {
+                margin-top: 200px;
+                flex-direction: column;
+                align-items: center;
+                gap: 18px;
+            }
+
+            .augment-card {
+                width: min(84vw, 260px);
+                height: 390px;
+            }
+
+            .augment-card-body {
+                grid-template-rows: 66px 1fr 110px;
+            }
+
+            .augment-card-title {
+                font-size: 26px;
+            }
+
+            .augment-card-desc {
+                font-size: 16px;
+            }
+        }
     </style>
 </head>
 
@@ -879,16 +907,16 @@ img {
             </div>
 
             <div id="augmentOverlay">
-    <div id="augmentPanel">
-        <div id="augmentStatus">증강을 선택하세요</div>
+                <div id="augmentPanel">
+                    <div id="augmentStatus">증강을 선택하세요</div>
 
-        <div id="augmentTimer">
-            <div id="augmentBar" class="silver"></div>
-        </div>
+                    <div id="augmentTimer">
+                        <div id="augmentBar" class="silver"></div>
+                    </div>
 
-        <div id="augmentCards"></div>
-    </div>
-</div>
+                    <div id="augmentCards"></div>
+                </div>
+            </div>
         </div>
 
         <div id="rightSidePanel">
@@ -944,39 +972,73 @@ img {
             }
         ];
 
+        function openOwnedAugmentDetail(aug) {
+            if (!aug) return;
+
+            const overlay = document.getElementById("ownedAugmentOverlay");
+            const card = document.getElementById("ownedAugmentCard");
+            const title = document.getElementById("ownedAugmentTitle");
+            const desc = document.getElementById("ownedAugmentDesc");
+            const art = document.getElementById("ownedAugmentArt");
+
+            if (!overlay || !card || !title || !desc || !art) {
+                console.error("먹은 증강 상세 모달 DOM 없음");
+                return;
+            }
+
+            card.className = "";
+            card.id = "ownedAugmentCard";
+            card.classList.add(aug.tier || "silver");
+
+            title.innerText = aug.title || "";
+            desc.innerText = aug.description || "";
+            art.innerHTML = aug.icon
+                ? `<img src="${aug.icon}" alt="${aug.title}" class="owned-augment-big-icon">`
+                : "";
+
+            overlay.classList.add("show");
+        }
+
+        function closeOwnedAugmentDetail() {
+            const overlay = document.getElementById("ownedAugmentOverlay");
+            if (overlay) {
+                overlay.classList.remove("show");
+            }
+        }
+
         function hideAugmentOverlay() {
-    const overlay = document.getElementById("augmentOverlay");
-    const cards = document.getElementById("augmentCards");
-    const bar = document.getElementById("augmentBar");
+            const overlay = document.getElementById("augmentOverlay");
+            const cards = document.getElementById("augmentCards");
+            const bar = document.getElementById("augmentBar");
 
-    clearAugmentTimer();
+            clearAugmentTimer();
 
-    if (augmentCloseTimeout) {
-        clearTimeout(augmentCloseTimeout);
-        augmentCloseTimeout = null;
-    }
+            if (augmentCloseTimeout) {
+                clearTimeout(augmentCloseTimeout);
+                augmentCloseTimeout = null;
+            }
 
-    if (overlay) {
-        overlay.classList.remove("show");
-        overlay.style.display = "";
-    }
+            if (overlay) {
+                overlay.classList.remove("show");
+                overlay.style.display = "";
+            }
 
-    if (cards) {
-        cards.innerHTML = "";
-    }
+            if (cards) {
+                cards.innerHTML = "";
+            }
 
-    if (bar) {
-        bar.style.transition = "none";
-        bar.style.width = "100%";
-    }
+            if (bar) {
+                bar.style.transition = "none";
+                bar.style.width = "100%";
+            }
 
-    augmentOpen = false;
-    augmentLocked = false;
-    selectedAugmentIndex = null;
+            augmentOpen = false;
+            augmentLocked = false;
+            selectedAugmentIndex = null;
 
-    const statusEl = document.getElementById("augmentStatus");
-    if (statusEl) statusEl.innerText = "증강을 선택하세요";
-}
+            const statusEl = document.getElementById("augmentStatus");
+            if (statusEl) statusEl.innerText = "증강을 선택하세요";
+        }
 
         function updateRematchButton(rematch) {
             const btn = document.getElementById("rematchBtn");
@@ -1248,10 +1310,14 @@ img {
             const augmentState = data.augment;
 
             if (augmentState?.owned) {
-                myOwnedAugments = augmentState.owned[myColor] ?? [];
-
-                const enemyColor = myColor === "W" ? "B" : "W";
-                enemyOwnedAugments = augmentState.owned[enemyColor] ?? [];
+                if (myColor === "W" || myColor === "B") {
+                    myOwnedAugments = augmentState.owned[myColor] ?? [];
+                    const enemyColor = myColor === "W" ? "B" : "W";
+                    enemyOwnedAugments = augmentState.owned[enemyColor] ?? [];
+                } else {
+                    myOwnedAugments = [];
+                    enemyOwnedAugments = [];
+                }
 
                 renderOwnedAugments();
             }
@@ -1649,6 +1715,7 @@ img {
             const tier = normalizeTier(option?.tier);
             const title = option?.title || `증강 ${index + 1}`;
             const description = option?.description || "설명이 아직 없습니다.";
+            const icon = option?.icon || "";
 
             const card = document.createElement("div");
             card.className = `augment-card ${tier}`;
@@ -1658,13 +1725,14 @@ img {
             card.innerHTML = `
         <div class="augment-card-body">
             <div class="augment-card-title">${title}</div>
-            <div class="augment-card-art"></div>
+            <div class="augment-card-art">
+                ${icon ? `<img src="${icon}" alt="${title}" class="augment-card-icon">` : ""}
+            </div>
             <div class="augment-card-desc">${description}</div>
         </div>
     `;
 
             card.onclick = () => selectAugment(index);
-
             return card;
         }
 
@@ -1711,22 +1779,22 @@ img {
         }
 
         function renderAugmentCards(options) {
-    const wrap = document.getElementById("augmentCards");
-    if (!wrap) return;
+            const wrap = document.getElementById("augmentCards");
+            if (!wrap) return;
 
-    wrap.innerHTML = "";
+            wrap.innerHTML = "";
 
-    options.forEach((option, index) => {
-        const card = buildAugmentCard(option, index);
-        wrap.appendChild(card);
-    });
+            options.forEach((option, index) => {
+                const card = buildAugmentCard(option, index);
+                wrap.appendChild(card);
+            });
 
-    requestAnimationFrame(() => {
-        [...wrap.children].forEach((card) => {
-            card.classList.add("show");
-        });
-    });
-}
+            requestAnimationFrame(() => {
+                [...wrap.children].forEach((card) => {
+                    card.classList.add("show");
+                });
+            });
+        }
 
         function disableAugmentCards() {
             const cards = document.querySelectorAll(".augment-card");
@@ -1741,57 +1809,78 @@ img {
         }
 
         function showAugmentOverlay({
-    tier = "silver",
-    myTurn = true,
-    options = DEBUG_AUGMENTS,
-    durationMs = 25000
-} = {}) {
-    const overlay = document.getElementById("augmentOverlay");
-    if (!overlay) return;
+            tier = "silver",
+            myTurn = true,
+            options = DEBUG_AUGMENTS,
+            durationMs = 25000
+        } = {}) {
+            const overlay = document.getElementById("augmentOverlay");
+            const rightPanel = document.getElementById("rightSidePanel");
+            if (!overlay) return;
 
-    augmentOpen = true;
-    augmentLocked = false;
-    selectedAugmentIndex = null;
+            augmentOpen = true;
+            augmentLocked = false;
+            selectedAugmentIndex = null;
 
-    overlay.style.display = "";
-    overlay.classList.add("show");
-    setAugmentBarTier(tier);
+            if (rightPanel) rightPanel.style.visibility = "hidden";
 
-    if (myTurn) {
-        setAugmentStatus("증강을 선택하세요");
-    } else {
-        setAugmentStatus("상대가 증강을 고르는 중...");
-    }
+            overlay.style.display = "";
+            overlay.classList.add("show");
+            setAugmentBarTier(tier);
 
-    setTimeout(() => {
-        renderAugmentCards(options);
+            if (myTurn) setAugmentStatus("증강을 선택하세요");
+            else setAugmentStatus("상대가 증강을 고르는 중...");
 
-        const bar = document.getElementById("augmentBar");
-        if (!bar) return;
+            setTimeout(() => {
+                renderAugmentCards(options);
 
-        if (myTurn) {
-            startAugmentTimer(durationMs);
-        } else {
-            disableAugmentCards();
-            clearAugmentTimer();
-            bar.style.transition = "none";
-            bar.style.width = "100%";
+                const bar = document.getElementById("augmentBar");
+                if (!bar) return;
+
+                if (myTurn) {
+                    startAugmentTimer(durationMs);
+                } else {
+                    disableAugmentCards();
+                    clearAugmentTimer();
+                    bar.style.transition = "none";
+                    bar.style.width = "100%";
+                }
+            }, 100);
         }
-    }, 100);
-}
 
-        function setAugmentWaiting(isWaiting) {
-            if (!augmentOpen) return;
+        function hideAugmentOverlay() {
+            const overlay = document.getElementById("augmentOverlay");
+            const cards = document.getElementById("augmentCards");
+            const bar = document.getElementById("augmentBar");
+            const rightPanel = document.getElementById("rightSidePanel");
 
-            if (isWaiting) {
-                augmentLocked = true;
-                clearAugmentTimer();
-                disableAugmentCards();
-                setAugmentStatus("상대가 증강을 고르는 중...");
-            } else {
-                augmentLocked = false;
-                setAugmentStatus("증강을 선택하세요");
+            clearAugmentTimer();
+
+            if (augmentCloseTimeout) {
+                clearTimeout(augmentCloseTimeout);
+                augmentCloseTimeout = null;
             }
+
+            if (overlay) {
+                overlay.classList.remove("show");
+                overlay.style.display = "";
+            }
+
+            if (rightPanel) rightPanel.style.visibility = "visible";
+
+            if (cards) cards.innerHTML = "";
+
+            if (bar) {
+                bar.style.transition = "none";
+                bar.style.width = "100%";
+            }
+
+            augmentOpen = false;
+            augmentLocked = false;
+            selectedAugmentIndex = null;
+
+            const statusEl = document.getElementById("augmentStatus");
+            if (statusEl) statusEl.innerText = "증강을 선택하세요";
         }
 
 
@@ -1987,6 +2076,15 @@ img {
             });
         }
     </script>
+    div id="ownedAugmentOverlay" onclick="closeOwnedAugmentDetail()">
+    <button id="ownedAugmentClose" onclick="event.stopPropagation(); closeOwnedAugmentDetail()">×</button>
+
+    <div id="ownedAugmentCard" class="silver" onclick="event.stopPropagation()">
+        <div id="ownedAugmentTitle"></div>
+        <div id="ownedAugmentArt"></div>
+        <div id="ownedAugmentDesc"></div>
+    </div>
+</div>
 </body>
 
 </html>
