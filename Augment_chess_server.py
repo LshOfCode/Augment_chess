@@ -60,6 +60,10 @@ def create_room_data():
                 "B": None
             }
         },
+        "owned": {
+            "W": [],
+            "B": []
+        },
         "move_count": 0
     }
 
@@ -112,6 +116,15 @@ def find_augment_by_id(augment_id: str):
             return augment
     return None
 
+def serialize_augment(augment):
+    return {
+        "id": augment["id"],
+        "tier": augment["tier"],
+        "title": augment["name"],
+        "description": augment["desc"],
+        "icon": augment.get("icon", ""),
+    }
+
 @app.get("/")
 def index():
     return FileResponse(STATIC_DIR / "index.html")
@@ -161,45 +174,15 @@ async def join_room(room_id: str, data: dict = Body(...)):
         room["augment"]["active"] = True
 
         room["augment"]["choices"]["W"] = [
-            {
-                "id": "bishop_to_knight",
-                "tier": "silver",
-                "title": "몽골리안 갬빗",
-                "description": "자신의 모든 비숍이 나이트로 전환됩니다."
-            },
-            {
-                "id": "king_buff",
-                "tier": "silver",
-                "title": "왕권 강화",
-                "description": "내 킹이 원래 이동 외에 상하좌우로 2칸 이동할 수 있지만 캐슬링이 금지됩니다."
-            },
-            {
-                "id": "pawn_retreat",
-                "tier": "silver",
-                "title": "후퇴하라!",
-                "description": "자신의 모든 폰이 1칸 뒤로 이동할 수 있습니다.(잡기는 불가능)"
-            }
+            serialize_augment(find_augment_by_id("bishop_to_knight")),
+            serialize_augment(find_augment_by_id("king_buff")),
+            serialize_augment(find_augment_by_id("pawn_retreat")),
         ]
 
         room["augment"]["choices"]["B"] = [
-            {
-                "id": "no_castling",
-                "tier": "silver",
-                "title": "캐슬링 금지",
-                "description": "상대의 캐슬링을 금지시킵니다."
-            },
-            {
-                "id": "pawn_slow",
-                "tier": "silver",
-                "title": "달팽이 폰",
-                "description": "상대의 처음 2번 2칸 전진 시도는 금지됩니다."
-            },
-            {
-                "id": "reorganize",
-                "tier": "silver",
-                "title": "재정비",
-                "description": "자신의 비숍 또는 나이트가 잡히면 무작위 빈칸에 폰을 하나 생성합니다.(1회 한정)"
-            }
+            serialize_augment(find_augment_by_id("no_castling")),
+            serialize_augment(find_augment_by_id("pawn_slow")),
+            serialize_augment(find_augment_by_id("reorganize")),
         ]
 
         await broadcast(room_id, {
@@ -424,6 +407,9 @@ async def select_augment(room_id: str, req: AugmentSelectRequest):
         raise HTTPException(status_code=400)
 
     room["augment"]["selected"][color] = req.augment_id
+    picked_augment = find_augment_by_id(req.augment_id)
+    if picked_augment is not None:
+        room["augment"]["owned"][color].append(serialize_augment(picked_augment))
 
     await broadcast(room_id, {
         "type": "update",

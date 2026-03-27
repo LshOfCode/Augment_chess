@@ -92,12 +92,14 @@
         }
 
         #ownedAugmentsPanel {
-            width: 130px;
-            min-width: 130px;
+            width: 372px;
+            min-width: 372px;
             height: 564px;
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 14px;
+            grid-template-columns: repeat(3, 108px);
+            grid-template-rows: repeat(2, 150px);
+            column-gap: 14px;
+            row-gap: 18px;
             align-content: start;
         }
 
@@ -903,6 +905,7 @@
             let augmentShownThisGame = false;
             let augmentCloseTimeout = null;
             let ownedAugments = [];
+            let enemyOwnedAugments = [];
 
             const DEBUG_AUGMENTS = [
                 {
@@ -1220,6 +1223,15 @@
                 updateRematchButton(data.rematch);
 
                 const augmentState = data.augment;
+
+                if (augmentState?.owned) {
+                    myOwnedAugments = augmentState.owned[myColor] ?? [];
+
+                    const enemyColor = myColor === "W" ? "B" : "W";
+                    enemyOwnedAugments = augmentState.owned[enemyColor] ?? [];
+
+                    renderOwnedAugments();
+                }
 
                 if (
                     augmentState?.active &&
@@ -1572,6 +1584,8 @@
                 selected = null;
                 gameEnded = false;
                 ownedAugments = [];
+                enemyOwnedAugments = [];
+                myOwnedAugments = [];
                 renderOwnedAugments();
                 augmentOpen = false;
                 augmentShownThisGame = false;
@@ -1801,7 +1815,7 @@
                     const result = await submitAugmentSelection(index, autoPicked);
 
                     if (picked) {
-                        ownedAugments.push({
+                        myOwnedAugments.push({
                             tier: picked.tier,
                             title: picked.title,
                             description: picked.description,
@@ -1826,28 +1840,38 @@
             function renderOwnedAugments() {
                 const slots = document.querySelectorAll(".owned-augment-slot");
 
+                const combined = [
+                    enemyOwnedAugments[0] || null,
+                    enemyOwnedAugments[1] || null,
+                    enemyOwnedAugments[2] || null,
+                    myOwnedAugments[0] || null,
+                    myOwnedAugments[1] || null,
+                    myOwnedAugments[2] || null,
+                ];
+
                 slots.forEach((slot, index) => {
                     slot.innerHTML = "";
                     slot.className = "owned-augment-slot";
+                    slot.onclick = null;
 
-                    const aug = ownedAugments[index];
+                    const aug = combined[index];
                     if (!aug) return;
 
                     slot.classList.add("filled");
                     slot.classList.add(aug.tier);
 
                     slot.innerHTML = `
-    <div class="owned-augment-mini-title">${aug.title}</div>
-    <div class="owned-augment-mini-art">
-        ${aug.icon ? `<img src="${aug.icon}" alt="${aug.title}" class="owned-augment-mini-icon">` : ""}
-    </div>
-`;
-                    slot.onclick = () => openOwnedAugmentDetail(index);
+            <div class="owned-augment-mini-title">${aug.title}</div>
+            <div class="owned-augment-mini-art">
+                ${aug.icon ? `<img src="${aug.icon}" alt="${aug.title}" class="owned-augment-mini-icon">` : ""}
+            </div>
+        `;
+
+                    slot.onclick = () => openOwnedAugmentDetail(aug);
                 });
             }
 
-            function openOwnedAugmentDetail(index) {
-                const aug = ownedAugments[index];
+            function openOwnedAugmentDetail(aug) {
                 if (!aug) return;
 
                 const overlay = document.getElementById("ownedAugmentOverlay");
