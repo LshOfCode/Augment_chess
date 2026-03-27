@@ -2282,7 +2282,43 @@
                     return;
                 }
 
-                // 이미 내 기물을 골랐으면 -> 상대 기물 토글 선택
+                // 이미 내 기물을 골랐고, 그 같은 기물을 다시 누르면 취소 시도
+                if (
+                    guardianState.selected_self &&
+                    guardianState.selected_self[0] === x &&
+                    guardianState.selected_self[1] === y &&
+                    (!guardianState.selected_enemy || guardianState.selected_enemy.length === 0)
+                ) {
+                    try {
+                        const res = await fetch(`${API_BASE}/rooms/${roomId}/guardian/select_self`, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                                player_id: playerId,
+                                x,
+                                y
+                            })
+                        });
+
+                        const data = await res.json();
+
+                        if (!res.ok) {
+                            console.log("guardian select_self cancel fail:", data);
+                            const status = document.getElementById("status");
+                            if (status) status.innerText = data.detail || "가디언 자기 기물 선택 취소 실패";
+                            return;
+                        }
+
+                        if (data.state) {
+                            renderBoardFromState(data.state);
+                        }
+                    } catch (err) {
+                        console.error(err);
+                    }
+                    return;
+                }
+
+                // 상대 기물 토글 선택
                 try {
                     const res = await fetch(`${API_BASE}/rooms/${roomId}/guardian/toggle_enemy`, {
                         method: "POST",

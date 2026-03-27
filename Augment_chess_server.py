@@ -557,6 +557,85 @@ async def guardian_select_self(room_id: str, data: dict = Body(...)):
 
     return {"success": True, "state": build_state(room)}
 
+@app.post("/rooms/{room_id}/guardian/toggle_enemy")
+async def guardian_toggle_enemy(room_id: str, data: dict = Body(...)):
+    if room_id not in rooms:
+        raise HTTPException(status_code=404, detail="room not found")
+
+    room = rooms[room_id]
+    guardian = room["guardian"]
+
+    if not guardian["active"]:
+        raise HTTPException(status_code=400, detail="guardian not active")
+
+    player_id = data.get("player_id")
+    x = data.get("x")
+    y = data.get("y")
+
+    if player_id is None:
+        raise HTTPException(status_code=400, detail="player_id required")
+    if x is None or y is None:
+        raise HTTPException(status_code=400, detail="x, y required")
+
+    color = get_player_color(room, player_id)
+    if color is None:
+        raise HTTPException(status_code=403, detail="only players can use guardian")
+
+    if guardian["current"] != color:
+        raise HTTPException(status_code=400, detail="not your guardian turn")
+
+    if not guardian["selected_self"]:
+        raise HTTPException(status_code=400, detail="select self piece first")
+
+    board = room["board"]
+
+    if not board.in_bounds(x, y):
+        raise HTTPException(status_code=400, detail="out of bounds")
+
+    piece = board.grid[y][x]
+    if piece is None:
+        raise HTTPException(status_code=400, detail="piece not found")
+
+    if piece.color == color:
+        raise HTTPException(status_code=400, detail="must select enemy piece")
+
+    if piece.name == "K":
+        raise HTTPException(status_code=400, detail="king cannot be selected")
+
+    pos = [x, y]
+    value = piece_value(piece.name)
+
+    # 이미 선택된 상대 기물이면 취소
+    if pos in guardian["selected_enemy"]:
+        guardian["selected_enemy"].remove(pos)
+        guardian["score"] -= value
+        if guardian["score"] < 0:
+            guardian["score"] = 0
+
+        guardian["start_time"] = time.time()
+
+        await broadcast(room_id, {
+            "type": "update",
+            "state": build_state(room)
+        })
+
+        return {"success": True, "state": build_state(room)}
+
+    # 새로 선택하려는데 점수 초과면 불가
+    if guardian["score"] + value > guardian["max_score"]:
+        raise HTTPException(status_code=400, detail="score exceeded")
+
+    guardian["selected_enemy"].append(pos)
+    guardian["score"] += value
+    guardian["start_time"] = time.time()
+
+    await broadcast(room_id, {
+        "type": "update",
+        "state": build_state(room)
+    })
+
+    return {"success": True, "state": build_state(room)}
+
 @app.post("/rooms/{room_id}/guardian/confirm")
 async def guardian_confirm(room_id: str, data: dict = Body(...)):
     if room_id not in rooms:
@@ -619,3 +698,4 @@ async def guardian_confirm(room_id: str, data: dict = Body(...)):
     })
 
     return {"success": True, "state": build_state(room)}
+
