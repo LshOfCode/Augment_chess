@@ -973,8 +973,7 @@
             let gameEnded = false;
             let socket = null;
             let clockTicker = null;
-            let clockInterval = null;
-
+            
             /* ===== augment state ===== */
             let augmentTimerId = null;
             let augmentAutoPickId = null;
@@ -1004,29 +1003,6 @@
                     description: "왕이 주변 한 칸에서 킹처럼 더 날카롭게 전장을 통제합니다."
                 }
             ];
-
-
-function resumeClockAfterAugment() {
-    if (clockInterval) clearInterval(clockInterval);
-
-    clockInterval = setInterval(() => {
-        if (currentTurn === 'W') {
-            whiteTime--;
-        } else {
-            blackTime--;
-        }
-
-        updateClockUI();
-
-        if (whiteTime <= 0 || blackTime <= 0) {
-            clearInterval(clockInterval);
-        }
-    }, 1000);
-}
-
-function startAugmentSelection() {
-    if (clockInterval) clearInterval(clockInterval);
-}
 
             function closeOwnedAugmentDetail() {
                 const overlay = document.getElementById("ownedAugmentOverlay");
@@ -1517,6 +1493,11 @@ function startAugmentSelection() {
 
                     if (data.result && data.result.success) {
                         selected = null;
+
+                        if (data.state) {
+                            renderBoardFromState(data.state);
+                        }
+
                         return;
                     }
 
