@@ -73,7 +73,11 @@ def build_state(room):
     data["clock"] = room["time"]
     data["rematch"] = room["rematch"]
     data["players"] = room["players"]
-    data["augment"] = room["augment"]
+
+    augment_state = dict(room["augment"])
+    augment_state["owned"] = room["owned"]
+
+    data["augment"] = augment_state
     return data
 
 
@@ -409,7 +413,7 @@ async def select_augment(room_id: str, req: AugmentSelectRequest):
     room["augment"]["selected"][color] = req.augment_id
     picked_augment = find_augment_by_id(req.augment_id)
     if picked_augment is not None:
-        room["augment"]["owned"][color].append(serialize_augment(picked_augment))
+        room["owned"][color].append(serialize_augment(picked_augment))
 
     await broadcast(room_id, {
         "type": "update",
