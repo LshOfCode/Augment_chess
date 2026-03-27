@@ -527,6 +527,22 @@ async def guardian_select_self(room_id: str, data: dict = Body(...)):
 
     if piece.name == "K":
         raise HTTPException(status_code=400, detail="king cannot be selected")
+    
+    if guardian["selected_self"] == [x, y]:
+        if guardian["selected_enemy"]:
+            raise HTTPException(status_code=400, detail="enemy pieces already selected")
+        guardian["selected_self"] = None
+        guardian["selected_enemy"] = []
+        guardian["max_score"] = 0
+        guardian["score"] = 0
+        guardian["start_time"] = time.time()
+
+        await broadcast(room_id, {
+            "type": "update",
+            "state": build_state(room)
+        })
+
+        return {"success": True, "state": build_state(room)}
 
     guardian["selected_self"] = [x, y]
     guardian["selected_enemy"] = []

@@ -2251,6 +2251,7 @@
                 if (!isMyGuardianTurn()) return;
                 if (!guardianState) return;
 
+                // 아직 내 기물을 안 골랐으면 -> 자기 기물 선택/취소
                 if (!guardianState.selected_self) {
                     try {
                         const res = await fetch(`${API_BASE}/rooms/${roomId}/guardian/select_self`, {
@@ -2281,7 +2282,33 @@
                     return;
                 }
 
-                console.log("이제 상대 기물 선택 단계");
+                // 이미 내 기물을 골랐으면 -> 상대 기물 토글 선택
+                try {
+                    const res = await fetch(`${API_BASE}/rooms/${roomId}/guardian/toggle_enemy`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            player_id: playerId,
+                            x,
+                            y
+                        })
+                    });
+
+                    const data = await res.json();
+
+                    if (!res.ok) {
+                        console.log("guardian toggle_enemy fail:", data);
+                        const status = document.getElementById("status");
+                        if (status) status.innerText = data.detail || "가디언 상대 기물 선택 실패";
+                        return;
+                    }
+
+                    if (data.state) {
+                        renderBoardFromState(data.state);
+                    }
+                } catch (err) {
+                    console.error(err);
+                }
             }
 
             async function confirmGuardian() {
