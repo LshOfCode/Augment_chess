@@ -26,16 +26,6 @@
             user-select: text;
         }
 
-        body {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            margin: 24px 16px;
-            background: #222;
-            color: white;
-            font-family: Arial, sans-serif;
-        }
-
         #topbar {
             display: flex;
             gap: 10px;
@@ -83,25 +73,6 @@
             user-select: text;
         }
 
-        #gameArea {
-            display: grid;
-            grid-template-columns: 300px 564px 180px;
-            align-items: center;
-            justify-content: center;
-            column-gap: 20px;
-            width: 100%;
-        }
-
-        #leftAugmentColumn {
-            width: 300px;
-            height: 720px;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            align-items: center;
-            flex: 0 0 300px;
-        }
-
         .augment-group {
             width: 300px;
             display: grid;
@@ -147,15 +118,6 @@
             display: flex;
             align-items: center;
             justify-content: center;
-        }
-
-        #rightSidePanel {
-            width: 180px;
-            height: 720px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            flex: 0 0 180px;
         }
 
         .owned-augment-mini-icon {
@@ -284,15 +246,95 @@
             z-index: 1;
         }
 
-        #clockPanel {
-            height: 564px;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            align-items: center;
-            width: 130px;
-            flex: 0 0 130px;
-        }
+        body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 0;
+    padding: 24px 16px 40px;
+    box-sizing: border-box;
+    min-height: 100vh;
+    background: #222;
+    color: white;
+    font-family: Arial, sans-serif;
+    overflow-x: hidden;
+}
+
+#gameArea {
+    position: relative;
+    width: 100%;
+    min-height: 720px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#leftAugmentColumn {
+    position: absolute;
+    top: 50%;
+    left: max(12px, calc(50% - 760px));
+    transform: translateY(-50%);
+    width: 280px;
+    height: 720px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.augment-group {
+    width: 280px;
+    display: grid;
+    grid-template-columns: repeat(3, 84px);
+    grid-template-rows: repeat(2, 118px);
+    column-gap: 10px;
+    row-gap: 14px;
+    justify-content: center;
+}
+
+.owned-augment-slot {
+    width: 84px;
+    height: 118px;
+    border: 3px solid rgba(255, 255, 255, 0.35);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.04);
+    box-sizing: border-box;
+    cursor: default;
+    position: relative;
+    overflow: hidden;
+    padding: 8px;
+}
+
+#boardWrap {
+    position: relative;
+    width: 564px;
+    height: 564px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    isolation: isolate;
+}
+
+#rightSidePanel {
+    position: absolute;
+    top: 50%;
+    left: calc(50% + 330px);
+    transform: translateY(-50%);
+    width: 140px;
+    height: 564px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#clockPanel {
+    height: 564px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    width: 130px;
+}
 
         .clock-box {
             font-size: 20px;
@@ -755,76 +797,132 @@
             opacity: 1;
         }
 
-        @media (max-width: 900px) {
-            #gameArea {
-                flex-direction: column;
-                align-items: center;
-            }
+        @media (max-width: 1280px) {
+    #leftAugmentColumn {
+        left: 12px;
+        width: 252px;
+    }
 
-            #leftSpacer {
-                display: none;
-            }
+    .augment-group {
+        width: 252px;
+        grid-template-columns: repeat(3, 76px);
+        grid-template-rows: repeat(2, 108px);
+    }
 
-            #clockPanel {
-                height: auto;
-                width: 100%;
-                min-width: 0;
-                flex-direction: row;
-                justify-content: center;
-                gap: 12px;
-            }
+    .owned-augment-slot {
+        width: 76px;
+        height: 108px;
+    }
 
-            #board {
-                grid-template-columns: repeat(8, min(11vw, 56px));
-                grid-template-rows: repeat(8, min(11vw, 56px));
-                width: auto;
-                height: auto;
-            }
+    #rightSidePanel {
+        left: auto;
+        right: 12px;
+        width: 120px;
+    }
 
-            .cell {
-                width: min(11vw, 56px);
-                height: min(11vw, 56px);
-            }
+    #clockPanel {
+        width: 110px;
+    }
 
-            img {
-                width: min(8vw, 42px);
-                height: min(8vw, 42px);
-            }
+    .clock-box {
+        min-width: 90px;
+        font-size: 18px;
+        padding: 10px 12px;
+    }
+}
 
-            #augmentStatus {
-                position: absolute;
-                top: 52px;
-                left: 50%;
-                transform: translateX(-50%);
-                background: white;
-                color: black;
-                border-radius: 14px;
-                padding: 16px 28px;
-                font-size: 24px;
-                font-weight: bold;
-                min-width: 360px;
-                text-align: center;
-                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
-                z-index: 2;
-            }
+@media (max-width: 900px) {
+    #gameArea {
+        min-height: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+    }
 
-            .augment-card {
-                width: min(84vw, 260px);
-                height: 390px;
-            }
+    #leftAugmentColumn,
+    #rightSidePanel {
+        position: static;
+        transform: none;
+        width: 100%;
+        height: auto;
+    }
 
-            .augment-card-body {
-                grid-template-rows: 66px 1fr 110px;
-            }
+    #leftAugmentColumn {
+        order: 2;
+        gap: 18px;
+    }
 
-            .augment-card-title {
-                font-size: 26px;
-            }
+    #boardWrap {
+        order: 1;
+        width: auto;
+        height: auto;
+    }
 
-            .augment-card-desc {
-                font-size: 16px;
-            }
-        }
+    #rightSidePanel {
+        order: 3;
+    }
+
+    #clockPanel {
+        height: auto;
+        width: 100%;
+        flex-direction: row;
+        justify-content: center;
+        gap: 12px;
+    }
+
+    #board {
+        grid-template-columns: repeat(8, min(11vw, 56px));
+        grid-template-rows: repeat(8, min(11vw, 56px));
+        width: auto;
+        height: auto;
+    }
+
+    .cell {
+        width: min(11vw, 56px);
+        height: min(11vw, 56px);
+    }
+
+    img {
+        width: min(8vw, 42px);
+        height: min(8vw, 42px);
+    }
+
+    #augmentStatus {
+        top: 52px;
+        min-width: min(88vw, 360px);
+        font-size: 22px;
+        padding: 14px 22px;
+    }
+
+    #augmentTimer {
+        top: 126px;
+        width: min(88vw, 820px);
+    }
+
+    #augmentCards {
+        margin-top: 200px;
+        flex-direction: column;
+        align-items: center;
+        gap: 18px;
+    }
+
+    .augment-card {
+        width: min(84vw, 260px);
+        height: 390px;
+    }
+
+    .augment-card-body {
+        grid-template-rows: 66px 1fr 110px;
+    }
+
+    .augment-card-title {
+        font-size: 26px;
+    }
+
+    .augment-card-desc {
+        font-size: 16px;
+    }
+}
     </style>
 </head>
 
@@ -874,8 +972,16 @@
             </div>
 
             <div id="augmentOverlay">
-                ...
-            </div>
+    <div id="augmentPanel">
+        <div id="augmentStatus">증강을 선택하세요</div>
+
+        <div id="augmentTimer">
+            <div id="augmentBar" class="silver"></div>
+        </div>
+
+        <div id="augmentCards"></div>
+    </div>
+</div>
         </div>
 
         <div id="rightSidePanel">
@@ -932,34 +1038,38 @@
         ];
 
         function hideAugmentOverlay() {
-            const overlay = document.getElementById("augmentOverlay");
-            const cards = document.getElementById("augmentCards");
-            const bar = document.getElementById("augmentBar");
+    const overlay = document.getElementById("augmentOverlay");
+    const cards = document.getElementById("augmentCards");
+    const bar = document.getElementById("augmentBar");
 
-            clearAugmentTimer();
+    clearAugmentTimer();
 
-            if (augmentCloseTimeout) {
-                clearTimeout(augmentCloseTimeout);
-                augmentCloseTimeout = null;
-            }
+    if (augmentCloseTimeout) {
+        clearTimeout(augmentCloseTimeout);
+        augmentCloseTimeout = null;
+    }
 
-            overlay.classList.remove("show");
-            overlay.style.display = "";
+    if (overlay) {
+        overlay.classList.remove("show");
+        overlay.style.display = "";
+    }
 
-            cards.innerHTML = "";
+    if (cards) {
+        cards.innerHTML = "";
+    }
 
-            if (bar) {
-                bar.style.transition = "none";
-                bar.style.width = "100%";
-            }
+    if (bar) {
+        bar.style.transition = "none";
+        bar.style.width = "100%";
+    }
 
-            augmentOpen = false;
-            augmentLocked = false;
-            selectedAugmentIndex = null;
+    augmentOpen = false;
+    augmentLocked = false;
+    selectedAugmentIndex = null;
 
-            const statusEl = document.getElementById("augmentStatus");
-            if (statusEl) statusEl.innerText = "증강을 선택하세요";
-        }
+    const statusEl = document.getElementById("augmentStatus");
+    if (statusEl) statusEl.innerText = "증강을 선택하세요";
+}
 
         function updateRematchButton(rematch) {
             const btn = document.getElementById("rematchBtn");
@@ -1566,8 +1676,6 @@
                 if (data.started) {
                     selected = null;
                     gameEnded = false;
-                    elected = null;
-                    gameEnded = false;
                     await joinCurrentRoom();
                     updateColorBox();
                     augmentShownThisGame = false;
@@ -1696,20 +1804,22 @@
         }
 
         function renderAugmentCards(options) {
-            const wrap = document.getElementById("augmentCards");
-            wrap.innerHTML = "";
+    const wrap = document.getElementById("augmentCards");
+    if (!wrap) return;
 
-            options.forEach((option, index) => {
-                const card = buildAugmentCard(option, index);
-                wrap.appendChild(card);
-            });
+    wrap.innerHTML = "";
 
-            requestAnimationFrame(() => {
-                [...wrap.children].forEach((card) => {
-                    card.classList.add("show");
-                });
-            });
-        }
+    options.forEach((option, index) => {
+        const card = buildAugmentCard(option, index);
+        wrap.appendChild(card);
+    });
+
+    requestAnimationFrame(() => {
+        [...wrap.children].forEach((card) => {
+            card.classList.add("show");
+        });
+    });
+}
 
         function disableAugmentCards() {
             const cards = document.querySelectorAll(".augment-card");
@@ -1724,41 +1834,44 @@
         }
 
         function showAugmentOverlay({
-            tier = "silver",
-            myTurn = true,
-            options = DEBUG_AUGMENTS,
-            durationMs = 25000
-        } = {}) {
-            const overlay = document.getElementById("augmentOverlay");
+    tier = "silver",
+    myTurn = true,
+    options = DEBUG_AUGMENTS,
+    durationMs = 25000
+} = {}) {
+    const overlay = document.getElementById("augmentOverlay");
+    if (!overlay) return;
 
-            augmentOpen = true;
-            augmentLocked = false;
-            selectedAugmentIndex = null;
+    augmentOpen = true;
+    augmentLocked = false;
+    selectedAugmentIndex = null;
 
-            overlay.style.display = "";
-            overlay.classList.add("show");
-            setAugmentBarTier(tier);
+    overlay.style.display = "";
+    overlay.classList.add("show");
+    setAugmentBarTier(tier);
 
-            if (myTurn) {
-                setAugmentStatus("증강을 선택하세요");
-            } else {
-                setAugmentStatus("상대가 증강을 고르는 중...");
-            }
+    if (myTurn) {
+        setAugmentStatus("증강을 선택하세요");
+    } else {
+        setAugmentStatus("상대가 증강을 고르는 중...");
+    }
 
-            setTimeout(() => {
-                renderAugmentCards(options);
+    setTimeout(() => {
+        renderAugmentCards(options);
 
-                if (myTurn) {
-                    startAugmentTimer(durationMs);
-                } else {
-                    disableAugmentCards();
-                    clearAugmentTimer();
-                    const bar = document.getElementById("augmentBar");
-                    bar.style.transition = "none";
-                    bar.style.width = "100%";
-                }
-            }, 1000);
+        const bar = document.getElementById("augmentBar");
+        if (!bar) return;
+
+        if (myTurn) {
+            startAugmentTimer(durationMs);
+        } else {
+            disableAugmentCards();
+            clearAugmentTimer();
+            bar.style.transition = "none";
+            bar.style.width = "100%";
         }
+    }, 100);
+}
 
         function setAugmentWaiting(isWaiting) {
             if (!augmentOpen) return;
