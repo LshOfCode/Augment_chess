@@ -91,12 +91,126 @@
             width: 100%;
         }
 
-        #leftSpacer {
-            width: 130px;
-            min-width: 130px;
-            height: 564px;
-            visibility: hidden;
-        }
+        #ownedAugmentsPanel {
+    width: 130px;
+    min-width: 130px;
+    height: 564px;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+    align-content: start;
+}
+
+.owned-augment-slot {
+    width: 58px;
+    height: 96px;
+    border: 3px solid rgba(255,255,255,0.35);
+    border-radius: 14px;
+    background: rgba(255,255,255,0.04);
+    box-sizing: border-box;
+    cursor: default;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 8px 6px;
+    overflow: hidden;
+}
+
+.owned-augment-slot.filled {
+    cursor: pointer;
+}
+
+.owned-augment-slot.silver {
+    background: linear-gradient(180deg, #5f656d 0%, #8b939d 28%, #bbc3cc 62%, #eef2f6 100%);
+}
+
+.owned-augment-slot.gold {
+    background: linear-gradient(180deg, #8c6700 0%, #c99708 26%, #f0c840 58%, #fff0b0 100%);
+}
+
+.owned-augment-slot.diamond {
+    background: linear-gradient(180deg, #0a5f7f 0%, #1494c0 26%, #43c9ee 58%, #dcfcff 100%);
+}
+
+.owned-augment-mini-title {
+    font-size: 14px;
+    font-weight: 900;
+    line-height: 1.05;
+    word-break: keep-all;
+    color: #111;
+}
+
+/* ===== 먹은 증강 상세 보기 ===== */
+#ownedAugmentOverlay {
+    position: fixed;
+    inset: 0;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    background: rgba(0,0,0,0.78);
+    z-index: 1200;
+}
+
+#ownedAugmentOverlay.show {
+    display: flex;
+}
+
+#ownedAugmentCard {
+    width: 340px;
+    min-height: 500px;
+    border-radius: 24px;
+    padding: 24px;
+    box-sizing: border-box;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.45);
+}
+
+#ownedAugmentCard.silver {
+    background: linear-gradient(180deg, #5f656d 0%, #8b939d 28%, #bbc3cc 62%, #eef2f6 100%);
+    color: #11161b;
+}
+
+#ownedAugmentCard.gold {
+    background: linear-gradient(180deg, #8c6700 0%, #c99708 26%, #f0c840 58%, #fff0b0 100%);
+    color: #221700;
+}
+
+#ownedAugmentCard.diamond {
+    background: linear-gradient(180deg, #0a5f7f 0%, #1494c0 26%, #43c9ee 58%, #dcfcff 100%);
+    color: #07181d;
+}
+
+#ownedAugmentClose {
+    position: fixed;
+    top: 28px;
+    right: 34px;
+    width: 68px;
+    height: 68px;
+    border: none;
+    border-radius: 16px;
+    font-size: 36px;
+    font-weight: bold;
+    background: rgba(255,255,255,0.18);
+    color: white;
+    cursor: pointer;
+}
+
+#ownedAugmentTitle {
+    font-size: 42px;
+    font-weight: 900;
+    line-height: 1.05;
+    margin-bottom: 24px;
+    word-break: keep-all;
+}
+
+#ownedAugmentDesc {
+    font-size: 23px;
+    font-weight: 800;
+    line-height: 1.35;
+    background: rgba(255,255,255,0.88);
+    border-radius: 18px;
+    padding: 18px;
+    color: #222;
+}
 
         #boardWrap {
             position: relative;
@@ -661,7 +775,15 @@
     <div id="status">방을 만들거나 참가해</div>
 
     <div id="gameArea">
-        <div id="leftSpacer"></div>
+        <div id="ownedAugmentsPanel">
+    <div class="owned-augment-slot" data-index="0"></div>
+    <div class="owned-augment-slot" data-index="1"></div>
+    <div class="owned-augment-slot" data-index="2"></div>
+    <div class="owned-augment-slot" data-index="3"></div>
+    <div class="owned-augment-slot" data-index="4"></div>
+    <div class="owned-augment-slot" data-index="5"></div>
+</div>
+
 
         <div id="boardWrap">
             <div id="board"></div>
@@ -706,7 +828,14 @@
                 <div id="bottomClock" class="clock-box">백 10:00</div>
             </div>
         </div>
+        <div id="ownedAugmentOverlay">
+    <button id="ownedAugmentClose" onclick="closeOwnedAugmentDetail()">✕</button>
 
+    <div id="ownedAugmentCard">
+        <div id="ownedAugmentTitle"></div>
+        <div id="ownedAugmentDesc"></div>
+    </div>
+</div>
         <button id="augmentDebugBtn" onclick="openDebugAugment()">증강 테스트</button>
 
         <script>
@@ -730,6 +859,7 @@
             let selectedAugmentIndex = null;
             let augmentShownThisGame = false;
             let augmentCloseTimeout = null;
+            let ownedAugments = [];
 
             const DEBUG_AUGMENTS = [
                 {
@@ -1142,7 +1272,7 @@
 
             async function loadBoard() {
                 if (!roomId) {
-                    renderEmptyBoard();
+                  renderEmptyBoard();  
                     return;
                 }
 
@@ -1375,6 +1505,8 @@
                     if (data.started) {
                         selected = null;
                         gameEnded = false;
+                        elected = null;
+    gameEnded = false;
                         await joinCurrentRoom();
                         updateColorBox();
                         augmentShownThisGame = false;
@@ -1396,6 +1528,8 @@
                 currentState = null;
                 selected = null;
                 gameEnded = false;
+                ownedAugments = [];
+renderOwnedAugments();
                 augmentOpen = false;
                 augmentShownThisGame = false;
                 hideAugmentOverlay();
@@ -1618,8 +1752,19 @@
                 }
 
                 try {
-                    const result = await submitAugmentSelection(index, autoPicked);
+                    const options = currentState?.augment?.choices?.[myColor] ?? [];
+const picked = options[index];
 
+                    const result = await submitAugmentSelection(index, autoPicked);
+                    
+                    if (picked) {
+    ownedAugments.push({
+        tier: picked.tier,
+        title: picked.title,
+        description: picked.description
+    });
+    renderOwnedAugments();
+}
                     if (result?.both_done) {
                         hideAugmentOverlay();
                     } else {
@@ -1633,6 +1778,47 @@
                     console.error(err);
                 }
             }
+            
+            function renderOwnedAugments() {
+    const slots = document.querySelectorAll(".owned-augment-slot");
+
+    slots.forEach((slot, index) => {
+        slot.innerHTML = "";
+        slot.className = "owned-augment-slot";
+
+        const aug = ownedAugments[index];
+        if (!aug) return;
+
+        slot.classList.add("filled");
+        slot.classList.add(aug.tier);
+
+        slot.innerHTML = `<div class="owned-augment-mini-title">${aug.title}</div>`;
+        slot.onclick = () => openOwnedAugmentDetail(index);
+    });
+}
+
+function openOwnedAugmentDetail(index) {
+    const aug = ownedAugments[index];
+    if (!aug) return;
+
+    const overlay = document.getElementById("ownedAugmentOverlay");
+    const card = document.getElementById("ownedAugmentCard");
+    const title = document.getElementById("ownedAugmentTitle");
+    const desc = document.getElementById("ownedAugmentDesc");
+
+    card.className = "";
+    card.id = "ownedAugmentCard";
+    card.classList.add(aug.tier);
+
+    title.innerText = aug.title;
+    desc.innerText = aug.description;
+
+    overlay.classList.add("show");
+}
+
+function closeOwnedAugmentDetail() {
+    document.getElementById("ownedAugmentOverlay").classList.remove("show");
+}
 
             function openDebugAugment() {
                 showAugmentOverlay({
@@ -1678,6 +1864,7 @@
 
             ensurePlayerId();
             renderEmptyBoard();
+            renderOwnedAugments();
             setClockUI({
                 W: 600,
                 B: 600,
