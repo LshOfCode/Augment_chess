@@ -311,7 +311,7 @@
             transform: translate(-50%, -50%);
             width: 564px;
             height: 564px;
-            z-index: 2100;
+            z-index: 1;
         }
 
         #guardianTimerBar {
@@ -1291,6 +1291,28 @@
                 document.getElementById("gameOverModal").classList.remove("show");
             }
 
+            function hideGuardianOverlay() {
+    const overlay = document.getElementById("guardianOverlay");
+    const clockPanel = document.getElementById("clockPanel");
+    const timerBar = document.getElementById("guardianTimerBar");
+
+    guardianMode = false;
+    guardianState = null;
+
+    if (overlay) {
+        overlay.classList.remove("show");
+        overlay.style.display = "none";
+    }
+
+    if (clockPanel) {
+        clockPanel.style.display = "";
+    }
+
+    if (timerBar) {
+        timerBar.style.width = "100%";
+    }
+}
+
             function setStatusUI(data) {
                 const status = document.getElementById("status");
                 const gameState = data.game_state;
@@ -1359,6 +1381,7 @@
                 gameEnded = false;
                 augmentShownThisGame = false;
                 hideAugmentOverlay();
+                hideGuardianOverlay();
 
                 await joinCurrentRoom();
                 await loadBoard();
@@ -1377,6 +1400,7 @@
                 gameEnded = false;
                 augmentShownThisGame = false;
                 hideAugmentOverlay();
+                hideGuardianOverlay();
 
                 await joinCurrentRoom();
                 await loadBoard();
@@ -1816,6 +1840,7 @@
                 augmentOpen = false;
                 augmentShownThisGame = false;
                 hideAugmentOverlay();
+                hideGuardianOverlay();
 
                 setRoomToUrl(null);
                 updateRoomBox();
