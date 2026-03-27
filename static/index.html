@@ -441,9 +441,10 @@
             display: none;
             justify-content: center;
             align-items: center;
-            background: rgba(0, 0, 0, 0.78);
+            background: rgba(0, 0, 0, 0.88);
             backdrop-filter: blur(4px);
             z-index: 1000;
+            overflow: hidden;
         }
 
         #augmentOverlay.show {
@@ -460,7 +461,7 @@
 
         #augmentStatus {
             position: absolute;
-            top: 10px;
+            top: 28px;
             left: 50%;
             transform: translateX(-50%);
             background: white;
@@ -477,7 +478,7 @@
 
         #augmentTimer {
             position: absolute;
-            top: 150px;
+            top: 102px;
             left: 50%;
             transform: translateX(-50%);
             width: min(820px, 72vw);
@@ -509,13 +510,18 @@
         }
 
         #augmentCards {
-            width: 100%;
+            position: absolute;
+            top: 165px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: min(980px, 92vw);
             display: flex;
             justify-content: center;
             align-items: flex-start;
             gap: 52px;
             flex-wrap: nowrap;
-            margin-top: 240px;
+            margin-top: 0;
+            z-index: 2;
         }
 
         .augment-card {
