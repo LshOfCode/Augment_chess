@@ -64,7 +64,17 @@ def create_room_data():
             "W": [],
             "B": []
         },
-        "move_count": 0
+        "move_count": 0,
+        "guardian": {
+            "active": False,
+            "queue": [],
+            "current": None,
+            "selected_self": None,
+            "selected_enemy": [],
+            "score": 0,
+            "max_score": 0,
+            "start_time": None
+        }
     }
 
 
@@ -73,9 +83,11 @@ def build_state(room):
     data["clock"] = room["time"]
     data["rematch"] = room["rematch"]
     data["players"] = room["players"]
+    data["move_count"] = room["move_count"]   # 추가
 
     augment_state = dict(room["augment"])
     augment_state["owned"] = room["owned"]
+    data["guardian"] = room["guardian"]
 
     data["augment"] = augment_state
     return data
@@ -178,13 +190,13 @@ async def join_room(room_id: str, data: dict = Body(...)):
         room["augment"]["active"] = True
 
         room["augment"]["choices"]["W"] = [
-            serialize_augment(find_augment_by_id("bishop_to_knight")),
+            serialize_augment(find_augment_by_id("guardian_of_balance")),
             serialize_augment(find_augment_by_id("king_buff")),
-            serialize_augment(find_augment_by_id("pawn_retreat")),
+            serialize_augment(find_augment_by_id("pawn_supply")),
         ]
 
         room["augment"]["choices"]["B"] = [
-            serialize_augment(find_augment_by_id("no_castling")),
+            serialize_augment(find_augment_by_id("guardian_of_balance")),
             serialize_augment(find_augment_by_id("pawn_slow")),
             serialize_augment(find_augment_by_id("reorganize")),
         ]
@@ -428,23 +440,37 @@ async def select_augment(room_id: str, req: AugmentSelectRequest):
     if both_done:
         board = room["board"]
 
+        guardian_players = []
+
         for apply_color in ["W", "B"]:
             augment_id = room["augment"]["selected"][apply_color]
-            augment = find_augment_by_id(augment_id)
 
-            if augment is not None:
-                augment["apply"](board, apply_color)
+            if augment_id == "guardian_of_balance":
+                guardian_players.append(apply_color)
+            else:
+                augment = find_augment_by_id(augment_id)
+                if augment is not None:
+                    augment["apply"](board, apply_color)
+        room["guardian"] = {
+            "active": len(guardian_players) > 0,
+            "queue": guardian_players,   # ["W", "B"]
+            "current": guardian_players[0] if guardian_players else None,
+            "selected_self": None,
+            "selected_enemy": [],
+            "score": 0,
+            "max_score": 0,
+            "start_time": time.time()
+        }
+        
         room["augment"]["active"] = False
-        room["time"]["running"] = room["board"].turn
         room["time"]["last_update"] = time.time()
-        update_clock(room)
+
+        if room["guardian"]["active"]:
+            room["time"]["running"] = None
+        else:
+            room["time"]["running"] = room["board"].turn
 
         await broadcast(room_id, {
             "type": "update",
             "state": build_state(room)
         })
-
-    return {
-        "both_done": both_done,
-        "state": build_state(room)
-    }

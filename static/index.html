@@ -550,6 +550,41 @@
             z-index: 2;
         }
 
+        #guardianOverlay {
+    position: fixed;
+    inset: 0;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.78);
+    z-index: 2000;
+}
+
+#guardianOverlay.show {
+    display: flex;
+}
+
+#guardianPanel {
+    background: white;
+    color: black;
+    border-radius: 16px;
+    padding: 20px 24px;
+    min-width: 320px;
+    text-align: center;
+}
+
+#guardianStatus {
+    font-size: 22px;
+    font-weight: bold;
+    margin-bottom: 12px;
+}
+
+#guardianScore {
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 14px;
+}
+
         .augment-card {
             width: 370px;
             height: 450px;
@@ -625,6 +660,17 @@
 
         .augment-card.show::after {
             opacity: 1;
+        }
+
+        .turn-counter-box {
+            background: white;
+            color: black;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            padding: 12px 16px;
+            min-width: 104px;
+            text-align: center;
         }
 
         .augment-card.silver {
@@ -943,796 +989,824 @@
         <div id="rightSidePanel">
             <div id="clockPanel">
                 <div id="topClock" class="clock-box">흑 10:00</div>
+                <div id="turnCounter" class="turn-counter-box">턴 수 : 0</div>
                 <div id="bottomClock" class="clock-box">백 10:00</div>
             </div>
-        </div>
 
-        <div id="augmentOverlay">
-            <div id="augmentPanel">
-                <div id="augmentStatus">증강을 선택하세요</div>
+            <div id="augmentOverlay">
+                <div id="augmentPanel">
+                    <div id="augmentStatus">증강을 선택하세요</div>
 
-                <div id="augmentTimer">
-                    <div id="augmentBar" class="silver"></div>
+                    <div id="augmentTimer">
+                        <div id="augmentBar" class="silver"></div>
+                    </div>
+                    <div id="guardianOverlay" style="display:none;">
+                        <div id="guardianPanel">
+                            <div id="guardianStatus">균형의 수호자 진행 중</div>
+                            <div id="guardianScore">점수: 0 / 0</div>
+                            <button id="guardianConfirmBtn" onclick="confirmGuardian()" disabled>확인</button>
+                        </div>
+                    </div>
+                    <div id="augmentCards"></div>
                 </div>
-
-                <div id="augmentCards"></div>
             </div>
-        </div>
 
-        <button id="augmentDebugBtn" onclick="openDebugAugment()">증강 테스트</button>
+            <button id="augmentDebugBtn" onclick="openDebugAugment()">증강 테스트</button>
 
-        <script>
-            const API_BASE = "";
+            <script>
+                const API_BASE = "";
 
-            let selected = null;
-            let currentBoard = null;
-            let currentState = null;
-            let roomId = null;
-            let playerId = null;
-            let myColor = null;
-            let gameEnded = false;
-            let socket = null;
-            let clockTicker = null;
-            
-            /* ===== augment state ===== */
-            let augmentTimerId = null;
-            let augmentAutoPickId = null;
-            let augmentOpen = false;
-            let augmentLocked = false;
-            let selectedAugmentIndex = null;
-            let augmentShownThisGame = false;
-            let augmentCloseTimeout = null;
-            let ownedAugments = [];
-            let enemyOwnedAugments = [];
-            let myOwnedAugments = [];
+                let selected = null;
+                let currentBoard = null;
+                let currentState = null;
+                let roomId = null;
+                let playerId = null;
+                let myColor = null;
+                let gameEnded = false;
+                let socket = null;
+                let clockTicker = null;
 
-            const DEBUG_AUGMENTS = [
-                {
-                    tier: "silver",
-                    title: "전장의 안개",
-                    description: "상대는 네 기물이 이동 가능한 칸만 볼 수 있습니다."
-                },
-                {
-                    tier: "gold",
-                    title: "언더 프로모션!!",
-                    description: "상대는 퀸으로 프로모션 할 수 없습니다."
-                },
-                {
-                    tier: "diamond",
-                    title: "왕의 각성",
-                    description: "왕이 주변 한 칸에서 킹처럼 더 날카롭게 전장을 통제합니다."
-                }
-            ];
+                /* ===== augment state ===== */
+                let augmentTimerId = null;
+                let augmentAutoPickId = null;
+                let augmentOpen = false;
+                let augmentLocked = false;
+                let selectedAugmentIndex = null;
+                let augmentShownThisGame = false;
+                let augmentCloseTimeout = null;
+                let ownedAugments = [];
+                let enemyOwnedAugments = [];
+                let myOwnedAugments = [];
+                let guardianMode = false;
+                let guardianState = null;
 
-            function closeOwnedAugmentDetail() {
-                const overlay = document.getElementById("ownedAugmentOverlay");
-                if (overlay) {
-                    overlay.classList.remove("show");
-                }
-            }
-
-            function hideAugmentOverlay() {
-                const overlay = document.getElementById("augmentOverlay");
-                const cards = document.getElementById("augmentCards");
-                const bar = document.getElementById("augmentBar");
-
-                clearAugmentTimer();
-
-                if (augmentCloseTimeout) {
-                    clearTimeout(augmentCloseTimeout);
-                    augmentCloseTimeout = null;
-                }
-
-                if (overlay) {
-                    overlay.classList.remove("show");
-                    overlay.style.display = "";
-                }
-
-                if (cards) {
-                    cards.innerHTML = "";
-                }
-
-                if (bar) {
-                    bar.style.transition = "none";
-                    bar.style.width = "100%";
-                }
-
-                augmentOpen = false;
-                augmentLocked = false;
-                selectedAugmentIndex = null;
-
-                const statusEl = document.getElementById("augmentStatus");
-                if (statusEl) statusEl.innerText = "증강을 선택하세요";
-            }
-
-            function updateRematchButton(rematch) {
-                const btn = document.getElementById("rematchBtn");
-                if (!btn) return;
-
-                const count = Number(rematch?.count ?? 0);
-                btn.innerText = `재대결 (${count}/2)`;
-
-                if (!gameEnded) {
-                    btn.disabled = true;
-                    return;
-                }
-
-                if (myColor !== "W" && myColor !== "B") {
-                    btn.disabled = true;
-                    return;
-                }
-
-                const voted = !!rematch?.votes?.[myColor];
-                btn.disabled = voted;
-            }
-
-            function connectSocket() {
-                if (!roomId) return;
-
-                if (socket) {
-                    socket.onclose = null;
-                    socket.close();
-                }
-
-                const wsProtocol = location.protocol === "https:" ? "wss" : "ws";
-                socket = new WebSocket(`${wsProtocol}://${location.host}/ws/${roomId}`);
-
-                socket.onmessage = (event) => {
-                    const data = JSON.parse(event.data);
-
-                    if (data.type === "update" || data.type === "rematch_vote") {
-                        renderBoardFromState(data.state);
+                const DEBUG_AUGMENTS = [
+                    {
+                        tier: "silver",
+                        title: "전장의 안개",
+                        description: "상대는 네 기물이 이동 가능한 칸만 볼 수 있습니다."
+                    },
+                    {
+                        tier: "gold",
+                        title: "언더 프로모션!!",
+                        description: "상대는 퀸으로 프로모션 할 수 없습니다."
+                    },
+                    {
+                        tier: "diamond",
+                        title: "왕의 각성",
+                        description: "왕이 주변 한 칸에서 킹처럼 더 날카롭게 전장을 통제합니다."
                     }
+                ];
 
-                    if (data.type === "augment_prompt") {
-                        showAugmentOverlay({
-                            tier: data.tier,
-                            myTurn: data.player_color === myColor,
-                            options: data.options,
-                            durationMs: data.duration_ms ?? 25000
-                        });
-                    }
-
-                    if (data.type === "augment_wait") {
-                        setAugmentWaiting(true);
-                    }
-                };
-
-                socket.onclose = () => {
-                    if (!roomId) return;
-                    setTimeout(connectSocket, 1000);
-                };
-            }
-
-            function displayToBoard(x, y) {
-                if (myColor === "B") return { x: 7 - x, y: 7 - y };
-                return { x, y };
-            }
-
-            function ensurePlayerId() {
-                let saved = sessionStorage.getItem("augment_chess_player_id");
-                if (!saved) {
-                    saved = crypto.randomUUID();
-                    sessionStorage.setItem("augment_chess_player_id", saved);
-                }
-                playerId = saved;
-            }
-
-            function getRoomFromUrl() {
-                const params = new URLSearchParams(window.location.search);
-                return params.get("room");
-            }
-
-            function setRoomToUrl(newRoomId) {
-                const url = new URL(window.location.href);
-                if (newRoomId) url.searchParams.set("room", newRoomId);
-                else url.searchParams.delete("room");
-                window.history.replaceState({}, "", url);
-            }
-
-            function updateRoomBox() {
-                document.getElementById("roomBox").innerText = roomId ? `방: ${roomId}` : "방: 없음";
-            }
-
-            function updateColorBox() {
-                let text = "내 색: 없음";
-                if (myColor === "W") text = "내 색: 백";
-                if (myColor === "B") text = "내 색: 흑";
-                if (myColor === "S") text = "내 색: 관전";
-                document.getElementById("colorBox").innerText = text;
-            }
-
-            function formatTime(sec) {
-                sec = Math.max(0, Math.floor(sec));
-
-                const m = Math.floor(sec / 60);
-                const s = sec % 60;
-
-                return `${m}:${s.toString().padStart(2, "0")}`;
-            }
-
-            function setClockUI(clock) {
-                if (!clock) return;
-
-                let w = Number(clock.W ?? 0);
-                let b = Number(clock.B ?? 0);
-
-                if (!clock.ended && clock.running && clock.last_update) {
-                    const now = Date.now() / 1000;
-                    const elapsed = Math.max(0, now - Number(clock.last_update));
-
-                    if (clock.running === "W") w -= elapsed;
-                    if (clock.running === "B") b -= elapsed;
-                }
-
-                w = Math.max(0, w);
-                b = Math.max(0, b);
-
-                const top = document.getElementById("topClock");
-                const bottom = document.getElementById("bottomClock");
-
-                if (myColor === "B") {
-                    top.innerText = `백 ${formatTime(w)}`;
-                    bottom.innerText = `흑 ${formatTime(b)}`;
-                    top.style.color = w <= 10 ? "red" : "black";
-                    bottom.style.color = b <= 10 ? "red" : "black";
-                } else {
-                    top.innerText = `흑 ${formatTime(b)}`;
-                    bottom.innerText = `백 ${formatTime(w)}`;
-                    top.style.color = b <= 10 ? "red" : "black";
-                    bottom.style.color = w <= 10 ? "red" : "black";
-                }
-            }
-
-            function startClockTicker() {
-                if (clockTicker) clearInterval(clockTicker);
-
-                clockTicker = setInterval(() => {
-                    if (!currentState || !currentState.clock) return;
-                    setClockUI(currentState.clock);
-                }, 200);
-            }
-
-            function stopClockTicker() {
-                if (clockTicker) {
-                    clearInterval(clockTicker);
-                    clockTicker = null;
-                }
-            }
-
-            function showGameOverModal(text) {
-                document.getElementById("modalTitle").innerText = text;
-                document.getElementById("gameOverModal").classList.add("show");
-            }
-
-            function hideGameOverModal() {
-                document.getElementById("gameOverModal").classList.remove("show");
-            }
-
-            function setStatusUI(data) {
-                const status = document.getElementById("status");
-                const gameState = data.game_state;
-                let text = "";
-                let endedNow = false;
-
-                if (data.clock?.ended) {
-                    endedNow = true;
-                    text = `${data.clock.winner === "W" ? "백" : "흑"} 시간 승리`;
-                } else if (gameState.checkmate) {
-                    endedNow = true;
-                    text = data.winner === "W" ? "백 승리" : "흑 승리";
-                } else if (gameState.draw) {
-                    endedNow = true;
-                    if (gameState.draw_reason === "stalemate") text = "스테일메이트";
-                    else if (gameState.draw_reason === "fifty_move") text = "50수 무승부";
-                    else if (gameState.draw_reason === "threefold_repetition") text = "3수 동형";
-                    else if (gameState.draw_reason === "insufficient_material") text = "기물 부족 무승부";
-                    else text = "무승부";
-                } else if (gameState.check) {
-                    text = data.turn === "W" ? "백 체크" : "흑 체크";
-                } else {
-                    text = data.turn === "W" ? "백 턴" : "흑 턴";
-                }
-
-                gameEnded = endedNow;
-                if (gameEnded || data.turn !== myColor) selected = null;
-                status.innerText = text;
-
-                if (gameEnded || data.clock?.ended) stopClockTicker();
-                if (gameEnded) showGameOverModal(text);
-                else hideGameOverModal();
-            }
-
-            function renderEmptyBoard() {
-                const boardDiv = document.getElementById("board");
-                boardDiv.innerHTML = "";
-
-                for (let y = 0; y < 8; y++) {
-                    for (let x = 0; x < 8; x++) {
-                        const cell = document.createElement("div");
-                        cell.className = "cell " + (((x + y) % 2 === 0) ? "white" : "black");
-                        boardDiv.appendChild(cell);
+                function closeOwnedAugmentDetail() {
+                    const overlay = document.getElementById("ownedAugmentOverlay");
+                    if (overlay) {
+                        overlay.classList.remove("show");
                     }
                 }
 
-                hideGameOverModal();
-            }
+                function hideAugmentOverlay() {
+                    const overlay = document.getElementById("augmentOverlay");
+                    const cards = document.getElementById("augmentCards");
+                    const bar = document.getElementById("augmentBar");
 
-            async function createRoom() {
-                const res = await fetch(`${API_BASE}/create_room`, { method: "POST" });
-                const data = await res.json();
+                    clearAugmentTimer();
 
-                roomId = data.room_id;
-                setRoomToUrl(roomId);
-                updateRoomBox();
-
-                await joinCurrentRoom();
-                await loadBoard();
-                connectSocket();
-            }
-
-            async function joinRoom() {
-                const input = document.getElementById("roomInput").value.trim().toUpperCase();
-                if (!input) return;
-
-                roomId = input;
-                setRoomToUrl(roomId);
-                updateRoomBox();
-
-                await joinCurrentRoom();
-                await loadBoard();
-                connectSocket();
-            }
-
-            async function joinCurrentRoom() {
-                if (!roomId) return;
-
-                const res = await fetch(`${API_BASE}/rooms/${roomId}/join`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ player_id: playerId })
-                });
-
-                if (!res.ok) {
-                    myColor = null;
-                    updateColorBox();
-                    return;
-                }
-
-                const data = await res.json();
-                myColor = data.color;
-                updateColorBox();
-            }
-
-            function renderBoardFromState(data) {
-                currentState = data;
-                currentBoard = data.board;
-
-                setStatusUI(data);
-                setClockUI(data.clock);
-                updateRematchButton(data.rematch);
-
-                const augmentState = data.augment;
-
-                if (augmentState?.owned) {
-                    if (myColor === "W" || myColor === "B") {
-                        myOwnedAugments = augmentState.owned[myColor] ?? [];
-                        const enemyColor = myColor === "W" ? "B" : "W";
-                        enemyOwnedAugments = augmentState.owned[enemyColor] ?? [];
-                    } else {
-                        myOwnedAugments = [];
-                        enemyOwnedAugments = [];
+                    if (augmentCloseTimeout) {
+                        clearTimeout(augmentCloseTimeout);
+                        augmentCloseTimeout = null;
                     }
 
-                    renderOwnedAugments();
-                }
-
-                if (
-                    augmentState?.active &&
-                    !augmentShownThisGame &&
-                    !gameEnded &&
-                    (myColor === "W" || myColor === "B")
-                ) {
-                    augmentShownThisGame = true;
-
-                    const myChoices = augmentState.choices?.[myColor] ?? [];
-
-                    showAugmentOverlay({
-                        tier: augmentState.tier || "gold",
-                        myTurn: augmentState.selected?.[myColor] == null,
-                        options: myChoices,
-                        durationMs: 25000
-                    });
-                }
-
-                if (!augmentState?.active && augmentOpen) {
-                    hideAugmentOverlay();
-                    augmentShownThisGame = false;
-                }
-
-                if (data.clock?.ended || gameEnded) stopClockTicker();
-                else startClockTicker();
-
-                const boardDiv = document.getElementById("board");
-                boardDiv.innerHTML = "";
-
-                const gameState = currentState.game_state;
-                const checkedColor = gameState.check ? data.turn : null;
-                const winnerColor = gameState.checkmate ? data.winner : null;
-
-                for (let displayY = 0; displayY < 8; displayY++) {
-                    for (let displayX = 0; displayX < 8; displayX++) {
-                        const pos = displayToBoard(displayX, displayY);
-                        const x = pos.x;
-                        const y = pos.y;
-
-                        const cell = document.createElement("div");
-                        cell.className = "cell " + (((displayX + displayY) % 2 === 0) ? "white" : "black");
-                        cell.onclick = () => handleClick(x, y);
-
-                        const piece = currentBoard[y][x];
-
-                        if (selected && selected.x === x && selected.y === y) {
-                            cell.classList.add("selected");
-                        }
-
-                        if (piece && piece.name === "K") {
-                            if (checkedColor === piece.color) {
-                                const ring = document.createElement("div");
-                                ring.className = "check-king";
-                                cell.appendChild(ring);
-                            }
-
-                            if (winnerColor === piece.color) {
-                                const ring = document.createElement("div");
-                                ring.className = "winner-king";
-                                cell.appendChild(ring);
-                            }
-                        }
-
-                        if (selected && isPossibleMove(selected.x, selected.y, x, y)) {
-                            const selectedPiece = currentBoard[selected.y][selected.x];
-                            const target = currentBoard[y][x];
-                            const isPawnEp = selectedPiece && selectedPiece.name === "P" && x !== selected.x && !target;
-
-                            if ((target && selectedPiece && target.color !== selectedPiece.color) || isPawnEp) {
-                                const ring = document.createElement("div");
-                                ring.className = "capture-ring";
-                                cell.appendChild(ring);
-                            } else {
-                                const dot = document.createElement("div");
-                                dot.className = "move-dot";
-                                cell.appendChild(dot);
-                            }
-                        }
-
-                        if (piece) {
-                            const img = document.createElement("img");
-                            img.src = `pieces/${piece.color.toLowerCase()}${piece.name.toLowerCase()}.png`;
-                            img.draggable = false;
-                            img.ondragstart = () => false;
-                            cell.appendChild(img);
-                        }
-
-                        boardDiv.appendChild(cell);
+                    if (overlay) {
+                        overlay.classList.remove("show");
+                        overlay.style.display = "";
                     }
-                }
-            }
 
-            async function loadBoard() {
-                if (!roomId) {
-                    renderEmptyBoard();
-                    return;
-                }
+                    if (cards) {
+                        cards.innerHTML = "";
+                    }
 
-                try {
-                    const res = await fetch(`${API_BASE}/rooms/${roomId}/state`);
-                    if (!res.ok) return;
+                    if (bar) {
+                        bar.style.transition = "none";
+                        bar.style.width = "100%";
+                    }
 
-                    const data = await res.json();
-                    renderBoardFromState(data);
-                } catch (err) {
-                    console.error(err);
-                }
-            }
+                    augmentOpen = false;
+                    augmentLocked = false;
+                    selectedAugmentIndex = null;
 
-            function isPromotionMove(x1, y1, x2, y2) {
-                const piece = currentBoard?.[y1]?.[x1];
-                if (!piece || piece.name !== "P") return false;
-                return (piece.color === "W" && y2 === 0) || (piece.color === "B" && y2 === 7);
-            }
-
-            function askPromotionPiece() {
-                const input = prompt("프로모션 선택: Q, R, B, N", "Q");
-                const value = (input || "Q").trim().toUpperCase();
-                if (["Q", "R", "B", "N"].includes(value)) return value;
-                return "Q";
-            }
-
-            function handleClick(x, y) {
-                if (augmentOpen) return;
-                if (gameEnded || !roomId || !myColor || myColor === "S") return;
-                if (!currentState || !currentBoard) return;
-                if (myColor !== currentState.turn) return;
-
-                const piece = currentBoard[y][x];
-
-                if (selected === null) {
-                    if (!piece || piece.color !== myColor) return;
-                    selected = { x, y };
-                    renderBoardFromState(currentState);
-                    return;
+                    const statusEl = document.getElementById("augmentStatus");
+                    if (statusEl) statusEl.innerText = "증강을 선택하세요";
                 }
 
-                if (piece && piece.color === myColor) {
-                    selected = { x, y };
-                    renderBoardFromState(currentState);
-                    return;
-                }
+                function updateRematchButton(rematch) {
+                    const btn = document.getElementById("rematchBtn");
+                    if (!btn) return;
 
-                movePiece(selected.x, selected.y, x, y);
-            }
+                    const count = Number(rematch?.count ?? 0);
+                    btn.innerText = `재대결 (${count}/2)`;
 
-            async function movePiece(x1, y1, x2, y2) {
-                if (augmentOpen) return;
-                if (gameEnded || !roomId || !myColor || myColor === "S") return;
-
-                let promotion = "Q";
-                if (isPromotionMove(x1, y1, x2, y2)) {
-                    promotion = askPromotionPiece();
-                }
-
-                try {
-                    const res = await fetch(`${API_BASE}/rooms/${roomId}/move`, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ x1, y1, x2, y2, player_id: playerId, promotion })
-                    });
-
-                    const data = await res.json();
-
-                    if (data.result && data.result.success) {
-                        selected = null;
-
-                        if (data.state) {
-                            renderBoardFromState(data.state);
-                        }
-
+                    if (!gameEnded) {
+                        btn.disabled = true;
                         return;
                     }
 
-                    if (data.result && data.result.message) {
-                        const status = document.getElementById("status");
-                        if (status) status.innerText = data.result.message;
-                    }
-                } catch (err) {
-                    console.error(err);
-                }
-            }
-
-            function isPossibleMove(x1, y1, x2, y2) {
-                const piece = currentBoard[y1]?.[x1];
-                const target = currentBoard[y2]?.[x2];
-
-                if (!piece) return false;
-                if (x1 === x2 && y1 === y2) return false;
-                if (target && target.color === piece.color) return false;
-
-                const dx = x2 - x1;
-                const dy = y2 - y1;
-                const adx = Math.abs(dx);
-                const ady = Math.abs(dy);
-
-                if (piece.name === "P") {
-                    const direction = piece.color === "W" ? -1 : 1;
-                    const startRow = piece.color === "W" ? 6 : 1;
-                    const hasPawnRetreat = !!currentState?.effects?.[piece.color]?.pawn_retreat;
-                    const slowCount = Number(currentState?.effects?.[piece.color]?.pawn_slow ?? 0);
-
-                    if (dx === 0 && dy === direction && !target) return true;
-
-                    if (hasPawnRetreat && dx === 0 && dy === -direction && !target) return true;
-
-                    if (
-                        dx === 0 &&
-                        y1 === startRow &&
-                        dy === 2 * direction &&
-                        !target &&
-                        currentBoard[y1 + direction][x1] === null
-                    ) {
-                        if (slowCount > 0) return false;
-                        return true;
+                    if (myColor !== "W" && myColor !== "B") {
+                        btn.disabled = true;
+                        return;
                     }
 
-                    if (adx === 1 && dy === direction && target && target.color !== piece.color) return true;
+                    const voted = !!rematch?.votes?.[myColor];
+                    btn.disabled = voted;
+                }
 
-                    if (adx === 1 && dy === direction && !target && currentState?.last_move) {
-                        const [lx1, ly1, lx2, ly2] = currentState.last_move;
-                        const moved = currentBoard[ly2]?.[lx2];
-                        if (
-                            moved &&
-                            moved.name === "P" &&
-                            moved.color !== piece.color &&
-                            Math.abs(ly2 - ly1) === 2 &&
-                            ly2 === y1 &&
-                            lx2 === x2
-                        ) return true;
+                function connectSocket() {
+                    if (!roomId) return;
+
+                    if (socket) {
+                        socket.onclose = null;
+                        socket.close();
                     }
 
-                    return false;
+                    const wsProtocol = location.protocol === "https:" ? "wss" : "ws";
+                    socket = new WebSocket(`${wsProtocol}://${location.host}/ws/${roomId}`);
+
+                    socket.onmessage = (event) => {
+                        const data = JSON.parse(event.data);
+
+                        if (data.type === "update" || data.type === "rematch_vote") {
+                            renderBoardFromState(data.state);
+                        }
+
+                        if (data.type === "augment_prompt") {
+                            showAugmentOverlay({
+                                tier: data.tier,
+                                myTurn: data.player_color === myColor,
+                                options: data.options,
+                                durationMs: data.duration_ms ?? 25000
+                            });
+                        }
+
+                        if (data.type === "augment_wait") {
+                            setAugmentWaiting(true);
+                        }
+                    };
+
+                    socket.onclose = () => {
+                        if (!roomId) return;
+                        setTimeout(connectSocket, 1000);
+                    };
                 }
 
-                if (piece.name === "N") {
-                    return (adx === 2 && ady === 1) || (adx === 1 && ady === 2);
+                function displayToBoard(x, y) {
+                    if (myColor === "B") return { x: 7 - x, y: 7 - y };
+                    return { x, y };
                 }
 
-                if (piece.name === "K") {
-                    if (adx <= 1 && ady <= 1) return true;
+                function ensurePlayerId() {
+                    let saved = sessionStorage.getItem("augment_chess_player_id");
+                    if (!saved) {
+                        saved = crypto.randomUUID();
+                        sessionStorage.setItem("augment_chess_player_id", saved);
+                    }
+                    playerId = saved;
+                }
 
-                    const effects = currentState?.effects || {};
+                function getRoomFromUrl() {
+                    const params = new URLSearchParams(window.location.search);
+                    return params.get("room");
+                }
 
-                    // 왕권 강화 2칸 이동
-                    if (effects[piece.color]?.king_buff) {
-                        if ((adx === 2 && ady === 0) || (adx === 0 && ady === 2)) {
-                            const midX = x1 + (dx / 2);
-                            const midY = y1 + (dy / 2);
+                function setRoomToUrl(newRoomId) {
+                    const url = new URL(window.location.href);
+                    if (newRoomId) url.searchParams.set("room", newRoomId);
+                    else url.searchParams.delete("room");
+                    window.history.replaceState({}, "", url);
+                }
 
-                            if (currentBoard[midY][midX] !== null) return false;
-                            return true;
+                function updateRoomBox() {
+                    document.getElementById("roomBox").innerText = roomId ? `방: ${roomId}` : "방: 없음";
+                }
+
+                function updateColorBox() {
+                    let text = "내 색: 없음";
+                    if (myColor === "W") text = "내 색: 백";
+                    if (myColor === "B") text = "내 색: 흑";
+                    if (myColor === "S") text = "내 색: 관전";
+                    document.getElementById("colorBox").innerText = text;
+                }
+
+                function formatTime(sec) {
+                    sec = Math.max(0, Math.floor(sec));
+
+                    const m = Math.floor(sec / 60);
+                    const s = sec % 60;
+
+                    return `${m}:${s.toString().padStart(2, "0")}`;
+                }
+
+                function setClockUI(clock) {
+                    if (!clock) return;
+
+                    let w = Number(clock.W ?? 0);
+                    let b = Number(clock.B ?? 0);
+
+                    if (!clock.ended && clock.running && clock.last_update) {
+                        const now = Date.now() / 1000;
+                        const elapsed = Math.max(0, now - Number(clock.last_update));
+
+                        if (clock.running === "W") w -= elapsed;
+                        if (clock.running === "B") b -= elapsed;
+                    }
+
+                    w = Math.max(0, w);
+                    b = Math.max(0, b);
+
+                    const top = document.getElementById("topClock");
+                    const bottom = document.getElementById("bottomClock");
+
+                    if (myColor === "B") {
+                        top.innerText = `백 ${formatTime(w)}`;
+                        bottom.innerText = `흑 ${formatTime(b)}`;
+                        top.style.color = w <= 10 ? "red" : "black";
+                        bottom.style.color = b <= 10 ? "red" : "black";
+                    } else {
+                        top.innerText = `흑 ${formatTime(b)}`;
+                        bottom.innerText = `백 ${formatTime(w)}`;
+                        top.style.color = b <= 10 ? "red" : "black";
+                        bottom.style.color = w <= 10 ? "red" : "black";
+                    }
+                }
+
+                function startClockTicker() {
+                    if (clockTicker) clearInterval(clockTicker);
+
+                    clockTicker = setInterval(() => {
+                        if (!currentState || !currentState.clock) return;
+                        setClockUI(currentState.clock);
+                    }, 200);
+                }
+
+                function stopClockTicker() {
+                    if (clockTicker) {
+                        clearInterval(clockTicker);
+                        clockTicker = null;
+                    }
+                }
+
+                function showGameOverModal(text) {
+                    document.getElementById("modalTitle").innerText = text;
+                    document.getElementById("gameOverModal").classList.add("show");
+                }
+
+                function hideGameOverModal() {
+                    document.getElementById("gameOverModal").classList.remove("show");
+                }
+
+                function setStatusUI(data) {
+                    const status = document.getElementById("status");
+                    const gameState = data.game_state;
+                    let text = "";
+                    let endedNow = false;
+
+                    if (data.clock?.ended) {
+                        endedNow = true;
+                        text = `${data.clock.winner === "W" ? "백" : "흑"} 시간 승리`;
+                    } else if (gameState.checkmate) {
+                        endedNow = true;
+                        text = data.winner === "W" ? "백 승리" : "흑 승리";
+                    } else if (gameState.winner) {
+                        endedNow = true;
+                        if (gameState.special_win === "countdown") {
+                            text = data.winner === "W" ? "백 승리 - 종말의 카운트다운" : "흑 승리 - 종말의 카운트다운";
+                        } else {
+                            text = data.winner === "W" ? "백 승리" : "흑 승리";
+                        }
+                    } else if (gameState.draw) {
+                        endedNow = true;
+                        if (gameState.draw_reason === "stalemate") text = "스테일메이트";
+                        else if (gameState.draw_reason === "fifty_move") text = "50수 무승부";
+                        else if (gameState.draw_reason === "threefold_repetition") text = "3수 동형";
+                        else if (gameState.draw_reason === "insufficient_material") text = "기물 부족 무승부";
+                        else text = "무승부";
+                    } else if (gameState.check) {
+                        text = data.turn === "W" ? "백 체크" : "흑 체크";
+                    } else {
+                        text = data.turn === "W" ? "백 턴" : "흑 턴";
+                    }
+
+                    gameEnded = endedNow;
+                    if (gameEnded || data.turn !== myColor) selected = null;
+                    status.innerText = text;
+
+                    if (gameEnded || data.clock?.ended) stopClockTicker();
+                    if (gameEnded) showGameOverModal(text);
+                    else hideGameOverModal();
+                }
+
+                function renderEmptyBoard() {
+                    const boardDiv = document.getElementById("board");
+                    boardDiv.innerHTML = "";
+
+                    for (let y = 0; y < 8; y++) {
+                        for (let x = 0; x < 8; x++) {
+                            const cell = document.createElement("div");
+                            cell.className = "cell " + (((x + y) % 2 === 0) ? "white" : "black");
+                            boardDiv.appendChild(cell);
                         }
                     }
 
-                    // 왕권 강화가 없을 때만 캐슬링 초록원
-                    if (ady === 0 && adx === 2) {
-                        if (effects[piece.color]?.no_castling) return false;
-
-                        const row = piece.color === "W" ? 7 : 0;
-                        if (y1 !== row || x1 !== 4) return false;
-
-                        const kingside = x2 > x1;
-                        const rookX = kingside ? 7 : 0;
-                        const between = kingside ? [5, 6] : [1, 2, 3];
-
-                        const rook = currentBoard[row]?.[rookX];
-                        if (!rook || rook.name !== "R" || rook.color !== piece.color) return false;
-
-                        for (const xx of between) {
-                            if (currentBoard[row][xx] !== null) return false;
-                        }
-
-                        return true;
-                    }
-
-                    return false;
+                    hideGameOverModal();
                 }
 
-                if (piece.name === "R") {
-                    if (x1 !== x2 && y1 !== y2) return false;
-                    return isPathClear(x1, y1, x2, y2);
+                async function createRoom() {
+                    const res = await fetch(`${API_BASE}/create_room`, { method: "POST" });
+                    const data = await res.json();
+
+                    roomId = data.room_id;
+                    setRoomToUrl(roomId);
+                    updateRoomBox();
+
+                    await joinCurrentRoom();
+                    await loadBoard();
+                    connectSocket();
                 }
 
-                if (piece.name === "B") {
-                    if (adx !== ady) return false;
-                    return isPathClear(x1, y1, x2, y2);
+                async function joinRoom() {
+                    const input = document.getElementById("roomInput").value.trim().toUpperCase();
+                    if (!input) return;
+
+                    roomId = input;
+                    setRoomToUrl(roomId);
+                    updateRoomBox();
+
+                    await joinCurrentRoom();
+                    await loadBoard();
+                    connectSocket();
                 }
 
-                if (piece.name === "Q") {
-                    if (x1 === x2 || y1 === y2 || adx === ady) {
-                        return isPathClear(x1, y1, x2, y2);
-                    }
-                    return false;
-                }
+                async function joinCurrentRoom() {
+                    if (!roomId) return;
 
-                return false;
-            }
-
-            function isPathClear(x1, y1, x2, y2) {
-                const stepX = x2 === x1 ? 0 : (x2 > x1 ? 1 : -1);
-                const stepY = y2 === y1 ? 0 : (y2 > y1 ? 1 : -1);
-
-                let x = x1 + stepX;
-                let y = y1 + stepY;
-
-                while (x !== x2 || y !== y2) {
-                    if (currentBoard[y][x] !== null) return false;
-                    x += stepX;
-                    y += stepY;
-                }
-
-                return true;
-            }
-
-            async function requestRematch() {
-                if (!roomId || !playerId || !gameEnded) return;
-
-                try {
-                    const res = await fetch(`${API_BASE}/rooms/${roomId}/rematch`, {
+                    const res = await fetch(`${API_BASE}/rooms/${roomId}/join`, {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ player_id: playerId })
                     });
 
-                    if (!res.ok) return;
+                    if (!res.ok) {
+                        myColor = null;
+                        updateColorBox();
+                        return;
+                    }
 
                     const data = await res.json();
+                    myColor = data.color;
+                    updateColorBox();
+                }
+                function isMyGuardianTurn() {
+                    return guardianMode && guardianState && guardianState.current === myColor;
+                }
 
-                    if (data.started) {
-                        selected = null;
-                        gameEnded = false;
-                        await joinCurrentRoom();
-                        updateColorBox();
-                        augmentShownThisGame = false;
+                function renderBoardFromState(data) {
+                    currentState = data;
+                    currentBoard = data.board;
+
+                    setTurnCounterUI(data.move_count);
+                    setStatusUI(data);
+                    setClockUI(data.clock);
+                    updateRematchButton(data.rematch);
+
+                    const augmentState = data.augment;
+
+                    guardianMode = !!guardian?.active;
+                    guardianState = guardian || null;
+
+                    if (augmentState?.owned) {
+                        if (myColor === "W" || myColor === "B") {
+                            myOwnedAugments = augmentState.owned[myColor] ?? [];
+                            const enemyColor = myColor === "W" ? "B" : "W";
+                            enemyOwnedAugments = augmentState.owned[enemyColor] ?? [];
+                        } else {
+                            myOwnedAugments = [];
+                            enemyOwnedAugments = [];
+                        }
+
+                        renderOwnedAugments();
+                    }
+
+                    if (
+                        augmentState?.active &&
+                        !augmentShownThisGame &&
+                        !gameEnded &&
+                        (myColor === "W" || myColor === "B")
+                    ) {
+                        augmentShownThisGame = true;
+
+                        const myChoices = augmentState.choices?.[myColor] ?? [];
+
+                        showAugmentOverlay({
+                            tier: augmentState.tier || "gold",
+                            myTurn: augmentState.selected?.[myColor] == null,
+                            options: myChoices,
+                            durationMs: 25000
+                        });
+                    }
+
+                    if (!augmentState?.active && augmentOpen) {
                         hideAugmentOverlay();
+                        augmentShownThisGame = false;
                     }
 
-                    if (data.state) {
-                        renderBoardFromState(data.state);
+                    if (data.clock?.ended || gameEnded) stopClockTicker();
+                    else startClockTicker();
+
+                    const boardDiv = document.getElementById("board");
+                    boardDiv.innerHTML = "";
+
+                    const gameState = currentState.game_state;
+                    const checkedColor = gameState.check ? data.turn : null;
+                    const winnerColor = gameState.checkmate ? data.winner : null;
+
+                    for (let displayY = 0; displayY < 8; displayY++) {
+                        for (let displayX = 0; displayX < 8; displayX++) {
+                            const pos = displayToBoard(displayX, displayY);
+                            const x = pos.x;
+                            const y = pos.y;
+
+                            const cell = document.createElement("div");
+                            cell.className = "cell " + (((displayX + displayY) % 2 === 0) ? "white" : "black");
+                            cell.onclick = () => handleClick(x, y);
+
+                            const piece = currentBoard[y][x];
+
+                            if (selected && selected.x === x && selected.y === y) {
+                                cell.classList.add("selected");
+                            }
+
+                            if (piece && piece.name === "K") {
+                                if (checkedColor === piece.color) {
+                                    const ring = document.createElement("div");
+                                    ring.className = "check-king";
+                                    cell.appendChild(ring);
+                                }
+
+                                if (winnerColor === piece.color) {
+                                    const ring = document.createElement("div");
+                                    ring.className = "winner-king";
+                                    cell.appendChild(ring);
+                                }
+                            }
+
+                            if (selected && isPossibleMove(selected.x, selected.y, x, y)) {
+                                const selectedPiece = currentBoard[selected.y][selected.x];
+                                const target = currentBoard[y][x];
+                                const isPawnEp = selectedPiece && selectedPiece.name === "P" && x !== selected.x && !target;
+
+                                if ((target && selectedPiece && target.color !== selectedPiece.color) || isPawnEp) {
+                                    const ring = document.createElement("div");
+                                    ring.className = "capture-ring";
+                                    cell.appendChild(ring);
+                                } else {
+                                    const dot = document.createElement("div");
+                                    dot.className = "move-dot";
+                                    cell.appendChild(dot);
+                                }
+                            }
+
+                            if (piece) {
+                                const img = document.createElement("img");
+                                img.src = `pieces/${piece.color.toLowerCase()}${piece.name.toLowerCase()}.png`;
+                                img.draggable = false;
+                                img.ondragstart = () => false;
+                                cell.appendChild(img);
+                            }
+
+                            boardDiv.appendChild(cell);
+                        }
+                    updateGuardianUI();
                     }
-                } catch (err) {
-                    console.error(err);
                 }
-            }
 
-            function leaveRoom() {
-                roomId = null;
-                myColor = null;
-                currentBoard = null;
-                currentState = null;
-                selected = null;
-                gameEnded = false;
-                ownedAugments = [];
-                enemyOwnedAugments = [];
-                myOwnedAugments = [];
-                renderOwnedAugments();
-                augmentOpen = false;
-                augmentShownThisGame = false;
-                hideAugmentOverlay();
+                async function loadBoard() {
+                    if (!roomId) {
+                        renderEmptyBoard();
+                        return;
+                    }
 
-                setRoomToUrl(null);
-                updateRoomBox();
-                updateColorBox();
+                    try {
+                        const res = await fetch(`${API_BASE}/rooms/${roomId}/state`);
+                        if (!res.ok) return;
 
-                document.getElementById("status").innerText = "방을 만들거나 참가해";
-                document.getElementById("roomInput").value = "";
-
-                setClockUI({ W: 600, B: 600 });
-                hideGameOverModal();
-                hideAugmentOverlay();
-                renderEmptyBoard();
-                stopClockTicker();
-
-                if (socket) {
-                    socket.onclose = null;
-                    socket.close();
-                    socket = null;
+                        const data = await res.json();
+                        renderBoardFromState(data);
+                    } catch (err) {
+                        console.error(err);
+                    }
                 }
-            }
 
-            /* ===== augment ui functions ===== */
-            function tierLabel(tier) {
-                if (tier === "silver") return "실버";
-                if (tier === "gold") return "골드";
-                if (tier === "diamond") return "다이아";
-                return "증강";
-            }
+                function isPromotionMove(x1, y1, x2, y2) {
+                    const piece = currentBoard?.[y1]?.[x1];
+                    if (!piece || piece.name !== "P") return false;
+                    return (piece.color === "W" && y2 === 0) || (piece.color === "B" && y2 === 7);
+                }
 
-            function normalizeTier(tier) {
-                if (tier === "silver" || tier === "gold" || tier === "diamond") return tier;
-                return "silver";
-            }
+                function askPromotionPiece() {
+                    const input = prompt("프로모션 선택: Q, R, B, N", "Q");
+                    const value = (input || "Q").trim().toUpperCase();
+                    if (["Q", "R", "B", "N"].includes(value)) return value;
+                    return "Q";
+                }
 
-            function buildAugmentCard(option, index) {
-                const tier = normalizeTier(option?.tier);
-                const title = option?.title || `증강 ${index + 1}`;
-                const description = option?.description || "설명이 아직 없습니다.";
-                const icon = option?.icon || "";
+                function handleClick(x, y) {
+                    if (augmentOpen) return;
+                    if (guardianMode) {
+                        handleGuardianClick(x, y);
+                        return;
+                    }
+                    if (gameEnded || !roomId || !myColor || myColor === "S") return;
+                    if (!currentState || !currentBoard) return;
+                    if (myColor !== currentState.turn) return;
 
-                const card = document.createElement("div");
-                card.className = `augment-card ${tier}`;
-                card.dataset.index = String(index);
-                card.dataset.tier = tier;
+                    const piece = currentBoard[y][x];
 
-                card.innerHTML = `
+                    if (selected === null) {
+                        if (!piece || piece.color !== myColor) return;
+                        selected = { x, y };
+                        renderBoardFromState(currentState);
+                        return;
+                    }
+
+                    if (piece && piece.color === myColor) {
+                        selected = { x, y };
+                        renderBoardFromState(currentState);
+                        return;
+                    }
+
+                    movePiece(selected.x, selected.y, x, y);
+                }
+
+                async function movePiece(x1, y1, x2, y2) {
+                    if (augmentOpen) return;
+                    if (gameEnded || !roomId || !myColor || myColor === "S") return;
+
+                    let promotion = "Q";
+                    if (isPromotionMove(x1, y1, x2, y2)) {
+                        promotion = askPromotionPiece();
+                    }
+
+                    try {
+                        const res = await fetch(`${API_BASE}/rooms/${roomId}/move`, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ x1, y1, x2, y2, player_id: playerId, promotion })
+                        });
+
+                        const data = await res.json();
+
+                        if (data.result && data.result.success) {
+                            selected = null;
+
+                            if (data.state) {
+                                renderBoardFromState(data.state);
+                            }
+
+                            return;
+                        }
+
+                        if (data.result && data.result.message) {
+                            const status = document.getElementById("status");
+                            if (status) status.innerText = data.result.message;
+                        }
+                    } catch (err) {
+                        console.error(err);
+                    }
+                }
+
+                function isPossibleMove(x1, y1, x2, y2) {
+                    const piece = currentBoard[y1]?.[x1];
+                    const target = currentBoard[y2]?.[x2];
+
+                    if (!piece) return false;
+                    if (x1 === x2 && y1 === y2) return false;
+                    if (target && target.color === piece.color) return false;
+
+                    const dx = x2 - x1;
+                    const dy = y2 - y1;
+                    const adx = Math.abs(dx);
+                    const ady = Math.abs(dy);
+
+                    if (piece.name === "P") {
+                        const direction = piece.color === "W" ? -1 : 1;
+                        const startRow = piece.color === "W" ? 6 : 1;
+                        const hasPawnRetreat = !!currentState?.effects?.[piece.color]?.pawn_retreat;
+                        const slowCount = Number(currentState?.effects?.[piece.color]?.pawn_slow ?? 0);
+
+                        if (dx === 0 && dy === direction && !target) return true;
+
+                        if (hasPawnRetreat && dx === 0 && dy === -direction && !target) return true;
+
+                        if (
+                            dx === 0 &&
+                            y1 === startRow &&
+                            dy === 2 * direction &&
+                            !target &&
+                            currentBoard[y1 + direction][x1] === null
+                        ) {
+                            if (slowCount > 0) return false;
+                            return true;
+                        }
+
+                        if (adx === 1 && dy === direction && target && target.color !== piece.color) return true;
+
+                        if (adx === 1 && dy === direction && !target && currentState?.last_move) {
+                            const [lx1, ly1, lx2, ly2] = currentState.last_move;
+                            const moved = currentBoard[ly2]?.[lx2];
+                            if (
+                                moved &&
+                                moved.name === "P" &&
+                                moved.color !== piece.color &&
+                                Math.abs(ly2 - ly1) === 2 &&
+                                ly2 === y1 &&
+                                lx2 === x2
+                            ) return true;
+                        }
+
+                        return false;
+                    }
+
+                    if (piece.name === "N") {
+                        return (adx === 2 && ady === 1) || (adx === 1 && ady === 2);
+                    }
+
+                    if (piece.name === "K") {
+                        if (adx <= 1 && ady <= 1) return true;
+
+                        const effects = currentState?.effects || {};
+
+                        // 왕권 강화 2칸 이동
+                        if (effects[piece.color]?.king_buff) {
+                            if ((adx === 2 && ady === 0) || (adx === 0 && ady === 2)) {
+                                const midX = x1 + (dx / 2);
+                                const midY = y1 + (dy / 2);
+
+                                if (currentBoard[midY][midX] !== null) return false;
+                                return true;
+                            }
+                        }
+
+                        // 왕권 강화가 없을 때만 캐슬링 초록원
+                        if (ady === 0 && adx === 2) {
+                            if (effects[piece.color]?.no_castling) return false;
+
+                            const row = piece.color === "W" ? 7 : 0;
+                            if (y1 !== row || x1 !== 4) return false;
+
+                            const kingside = x2 > x1;
+                            const rookX = kingside ? 7 : 0;
+                            const between = kingside ? [5, 6] : [1, 2, 3];
+
+                            const rook = currentBoard[row]?.[rookX];
+                            if (!rook || rook.name !== "R" || rook.color !== piece.color) return false;
+
+                            for (const xx of between) {
+                                if (currentBoard[row][xx] !== null) return false;
+                            }
+
+                            return true;
+                        }
+
+                        return false;
+                    }
+
+                    if (piece.name === "R") {
+                        if (x1 !== x2 && y1 !== y2) return false;
+                        return isPathClear(x1, y1, x2, y2);
+                    }
+
+                    if (piece.name === "B") {
+                        if (adx !== ady) return false;
+                        return isPathClear(x1, y1, x2, y2);
+                    }
+
+                    if (piece.name === "Q") {
+                        if (x1 === x2 || y1 === y2 || adx === ady) {
+                            return isPathClear(x1, y1, x2, y2);
+                        }
+                        return false;
+                    }
+
+                    return false;
+                }
+
+                function isPathClear(x1, y1, x2, y2) {
+                    const stepX = x2 === x1 ? 0 : (x2 > x1 ? 1 : -1);
+                    const stepY = y2 === y1 ? 0 : (y2 > y1 ? 1 : -1);
+
+                    let x = x1 + stepX;
+                    let y = y1 + stepY;
+
+                    while (x !== x2 || y !== y2) {
+                        if (currentBoard[y][x] !== null) return false;
+                        x += stepX;
+                        y += stepY;
+                    }
+
+                    return true;
+                }
+
+                async function requestRematch() {
+                    if (!roomId || !playerId || !gameEnded) return;
+
+                    try {
+                        const res = await fetch(`${API_BASE}/rooms/${roomId}/rematch`, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ player_id: playerId })
+                        });
+
+                        if (!res.ok) return;
+
+                        const data = await res.json();
+
+                        if (data.started) {
+                            selected = null;
+                            gameEnded = false;
+                            await joinCurrentRoom();
+                            updateColorBox();
+                            augmentShownThisGame = false;
+                            hideAugmentOverlay();
+                        }
+
+                        if (data.state) {
+                            renderBoardFromState(data.state);
+                        }
+                    } catch (err) {
+                        console.error(err);
+                    }
+                }
+
+                function leaveRoom() {
+                    roomId = null;
+                    myColor = null;
+                    currentBoard = null;
+                    currentState = null;
+                    selected = null;
+                    gameEnded = false;
+                    ownedAugments = [];
+                    enemyOwnedAugments = [];
+                    myOwnedAugments = [];
+                    renderOwnedAugments();
+                    augmentOpen = false;
+                    augmentShownThisGame = false;
+                    hideAugmentOverlay();
+
+                    setRoomToUrl(null);
+                    updateRoomBox();
+                    updateColorBox();
+
+                    document.getElementById("status").innerText = "방을 만들거나 참가해";
+                    document.getElementById("roomInput").value = "";
+
+                    setClockUI({ W: 600, B: 600 });
+                    hideGameOverModal();
+                    hideAugmentOverlay();
+                    renderEmptyBoard();
+                    stopClockTicker();
+                    setTurnCounterUI(0);
+
+                    if (socket) {
+                        socket.onclose = null;
+                        socket.close();
+                        socket = null;
+                    }
+                }
+
+                /* ===== augment ui functions ===== */
+                function tierLabel(tier) {
+                    if (tier === "silver") return "실버";
+                    if (tier === "gold") return "골드";
+                    if (tier === "diamond") return "다이아";
+                    return "증강";
+                }
+
+                function normalizeTier(tier) {
+                    if (tier === "silver" || tier === "gold" || tier === "diamond") return tier;
+                    return "silver";
+                }
+
+                function buildAugmentCard(option, index) {
+                    const tier = normalizeTier(option?.tier);
+                    const title = option?.title || `증강 ${index + 1}`;
+                    const description = option?.description || "설명이 아직 없습니다.";
+                    const icon = option?.icon || "";
+
+                    const card = document.createElement("div");
+                    card.className = `augment-card ${tier}`;
+                    card.dataset.index = String(index);
+                    card.dataset.tier = tier;
+
+                    card.innerHTML = `
         <div class="augment-card-body">
             <div class="augment-card-title">${title}</div>
             <div class="augment-card-art">
@@ -1742,366 +1816,423 @@
         </div>
     `;
 
-                card.onclick = () => selectAugment(index);
-                return card;
-            }
-
-            function setAugmentStatus(text) {
-                const el = document.getElementById("augmentStatus");
-                if (el) el.innerText = text;
-            }
-
-            function clearAugmentTimer() {
-                if (augmentTimerId) {
-                    clearTimeout(augmentTimerId);
-                    augmentTimerId = null;
+                    card.onclick = () => selectAugment(index);
+                    return card;
                 }
-                if (augmentAutoPickId) {
-                    clearTimeout(augmentAutoPickId);
-                    augmentAutoPickId = null;
+
+                function setAugmentStatus(text) {
+                    const el = document.getElementById("augmentStatus");
+                    if (el) el.innerText = text;
                 }
-            }
 
-            function setAugmentBarTier(tier) {
-                const bar = document.getElementById("augmentBar");
-                if (!bar) return;
-                bar.className = "";
-                bar.classList.add(normalizeTier(tier));
-            }
+                function clearAugmentTimer() {
+                    if (augmentTimerId) {
+                        clearTimeout(augmentTimerId);
+                        augmentTimerId = null;
+                    }
+                    if (augmentAutoPickId) {
+                        clearTimeout(augmentAutoPickId);
+                        augmentAutoPickId = null;
+                    }
+                }
 
-            function startAugmentTimer(durationMs) {
-                const bar = document.getElementById("augmentBar");
-                if (!bar) return;
+                function setAugmentBarTier(tier) {
+                    const bar = document.getElementById("augmentBar");
+                    if (!bar) return;
+                    bar.className = "";
+                    bar.classList.add(normalizeTier(tier));
+                }
 
-                clearAugmentTimer();
-
-                bar.style.transition = "none";
-                bar.style.width = "100%";
-                void bar.offsetWidth;
-
-                bar.style.transition = `width ${durationMs}ms linear`;
-                bar.style.width = "0%";
-
-                augmentAutoPickId = setTimeout(() => {
-                    if (!augmentOpen || augmentLocked) return;
-                    selectAugment(0, true);
-                }, durationMs);
-            }
-
-            function renderAugmentCards(options) {
-                const wrap = document.getElementById("augmentCards");
-                if (!wrap) return;
-
-                wrap.innerHTML = "";
-
-                options.forEach((option, index) => {
-                    const card = buildAugmentCard(option, index);
-                    wrap.appendChild(card);
-                });
-
-                requestAnimationFrame(() => {
-                    [...wrap.children].forEach((card) => {
-                        card.classList.add("show");
-                    });
-                });
-            }
-
-            function disableAugmentCards() {
-                const cards = document.querySelectorAll(".augment-card");
-                cards.forEach(card => card.classList.add("disabled"));
-            }
-
-            function highlightSelectedAugment(index) {
-                const cards = document.querySelectorAll(".augment-card");
-                cards.forEach(card => card.classList.remove("selected-card"));
-                const target = [...cards].find(card => Number(card.dataset.index) === index);
-                if (target) target.classList.add("selected-card");
-            }
-
-            function showAugmentOverlay({
-                tier = "silver",
-                myTurn = true,
-                options = DEBUG_AUGMENTS,
-                durationMs = 25000
-            } = {}) {
-                const overlay = document.getElementById("augmentOverlay");
-                const rightPanel = document.getElementById("rightSidePanel");
-                if (!overlay) return;
-
-                augmentOpen = true;
-                augmentLocked = false;
-                selectedAugmentIndex = null;
-
-                if (rightPanel) rightPanel.style.visibility = "hidden";
-
-                overlay.style.display = "";
-                overlay.classList.add("show");
-                setAugmentBarTier(tier);
-
-                if (myTurn) setAugmentStatus("증강을 선택하세요");
-                else setAugmentStatus("상대가 증강을 고르는 중...");
-
-                setTimeout(() => {
-                    renderAugmentCards(options);
-
+                function startAugmentTimer(durationMs) {
                     const bar = document.getElementById("augmentBar");
                     if (!bar) return;
 
-                    if (myTurn) {
-                        startAugmentTimer(durationMs);
-                    } else {
-                        disableAugmentCards();
-                        clearAugmentTimer();
+                    clearAugmentTimer();
+
+                    bar.style.transition = "none";
+                    bar.style.width = "100%";
+                    void bar.offsetWidth;
+
+                    bar.style.transition = `width ${durationMs}ms linear`;
+                    bar.style.width = "0%";
+
+                    augmentAutoPickId = setTimeout(() => {
+                        if (!augmentOpen || augmentLocked) return;
+                        selectAugment(0, true);
+                    }, durationMs);
+                }
+
+                function renderAugmentCards(options) {
+                    const wrap = document.getElementById("augmentCards");
+                    if (!wrap) return;
+
+                    wrap.innerHTML = "";
+
+                    options.forEach((option, index) => {
+                        const card = buildAugmentCard(option, index);
+                        wrap.appendChild(card);
+                    });
+
+                    requestAnimationFrame(() => {
+                        [...wrap.children].forEach((card) => {
+                            card.classList.add("show");
+                        });
+                    });
+                }
+
+                function disableAugmentCards() {
+                    const cards = document.querySelectorAll(".augment-card");
+                    cards.forEach(card => card.classList.add("disabled"));
+                }
+
+                function highlightSelectedAugment(index) {
+                    const cards = document.querySelectorAll(".augment-card");
+                    cards.forEach(card => card.classList.remove("selected-card"));
+                    const target = [...cards].find(card => Number(card.dataset.index) === index);
+                    if (target) target.classList.add("selected-card");
+                }
+
+                function showAugmentOverlay({
+                    tier = "silver",
+                    myTurn = true,
+                    options = DEBUG_AUGMENTS,
+                    durationMs = 25000
+                } = {}) {
+                    const overlay = document.getElementById("augmentOverlay");
+                    const rightPanel = document.getElementById("rightSidePanel");
+                    if (!overlay) return;
+
+                    augmentOpen = true;
+                    augmentLocked = false;
+                    selectedAugmentIndex = null;
+
+                    if (rightPanel) rightPanel.style.visibility = "hidden";
+
+                    overlay.style.display = "";
+                    overlay.classList.add("show");
+                    setAugmentBarTier(tier);
+
+                    if (myTurn) setAugmentStatus("증강을 선택하세요");
+                    else setAugmentStatus("상대가 증강을 고르는 중...");
+
+                    setTimeout(() => {
+                        renderAugmentCards(options);
+
+                        const bar = document.getElementById("augmentBar");
+                        if (!bar) return;
+
+                        if (myTurn) {
+                            startAugmentTimer(durationMs);
+                        } else {
+                            disableAugmentCards();
+                            clearAugmentTimer();
+                            bar.style.transition = "none";
+                            bar.style.width = "100%";
+                        }
+                    }, 100);
+                }
+
+                function hideAugmentOverlay() {
+                    const overlay = document.getElementById("augmentOverlay");
+                    const cards = document.getElementById("augmentCards");
+                    const bar = document.getElementById("augmentBar");
+                    const rightPanel = document.getElementById("rightSidePanel");
+
+                    clearAugmentTimer();
+
+                    if (augmentCloseTimeout) {
+                        clearTimeout(augmentCloseTimeout);
+                        augmentCloseTimeout = null;
+                    }
+
+                    if (overlay) {
+                        overlay.classList.remove("show");
+                        overlay.style.display = "";
+                    }
+
+                    if (rightPanel) rightPanel.style.visibility = "visible";
+
+                    if (cards) cards.innerHTML = "";
+
+                    if (bar) {
                         bar.style.transition = "none";
                         bar.style.width = "100%";
                     }
-                }, 100);
-            }
 
-            function hideAugmentOverlay() {
-                const overlay = document.getElementById("augmentOverlay");
-                const cards = document.getElementById("augmentCards");
-                const bar = document.getElementById("augmentBar");
-                const rightPanel = document.getElementById("rightSidePanel");
+                    augmentOpen = false;
+                    augmentLocked = false;
+                    selectedAugmentIndex = null;
 
-                clearAugmentTimer();
-
-                if (augmentCloseTimeout) {
-                    clearTimeout(augmentCloseTimeout);
-                    augmentCloseTimeout = null;
+                    const statusEl = document.getElementById("augmentStatus");
+                    if (statusEl) statusEl.innerText = "증강을 선택하세요";
                 }
 
-                if (overlay) {
-                    overlay.classList.remove("show");
-                    overlay.style.display = "";
+
+
+                async function submitAugmentSelection(index, autoPicked = false) {
+                    const options = currentState?.augment?.choices?.[myColor] ?? [];
+                    const picked = options[index];
+                    if (!picked) throw new Error("augment option not found");
+
+                    const res = await fetch(`${API_BASE}/rooms/${roomId}/augment/select`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            player_id: playerId,
+                            augment_id: picked.id
+                        })
+                    });
+
+                    if (!res.ok) {
+                        throw new Error("augment select failed");
+                    }
+
+                    return await res.json();
                 }
 
-                if (rightPanel) rightPanel.style.visibility = "visible";
+                async function selectAugment(index, autoPicked = false) {
+                    if (!augmentOpen || augmentLocked) return;
+                    if (selectedAugmentIndex !== null) return;
 
-                if (cards) cards.innerHTML = "";
+                    selectedAugmentIndex = index;
+                    augmentLocked = true;
 
-                if (bar) {
-                    bar.style.transition = "none";
-                    bar.style.width = "100%";
-                }
+                    clearAugmentTimer();
+                    highlightSelectedAugment(index);
+                    disableAugmentCards();
 
-                augmentOpen = false;
-                augmentLocked = false;
-                selectedAugmentIndex = null;
-
-                const statusEl = document.getElementById("augmentStatus");
-                if (statusEl) statusEl.innerText = "증강을 선택하세요";
-            }
-
-
-
-            async function submitAugmentSelection(index, autoPicked = false) {
-                const options = currentState?.augment?.choices?.[myColor] ?? [];
-                const picked = options[index];
-                if (!picked) throw new Error("augment option not found");
-
-                const res = await fetch(`${API_BASE}/rooms/${roomId}/augment/select`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        player_id: playerId,
-                        augment_id: picked.id
-                    })
-                });
-
-                if (!res.ok) {
-                    throw new Error("augment select failed");
-                }
-
-                return await res.json();
-            }
-
-            async function selectAugment(index, autoPicked = false) {
-                if (!augmentOpen || augmentLocked) return;
-                if (selectedAugmentIndex !== null) return;
-
-                selectedAugmentIndex = index;
-                augmentLocked = true;
-
-                clearAugmentTimer();
-                highlightSelectedAugment(index);
-                disableAugmentCards();
-
-                if (autoPicked) {
-                    setAugmentStatus("시간 초과! 왼쪽 증강이 자동 선택되었습니다");
-                } else {
-                    setAugmentStatus("선택 완료! 상대가 고르는 중...");
-                }
-
-                try {
-                    const result = await submitAugmentSelection(index, autoPicked);
-
-                    if (result?.both_done) {
-                        hideAugmentOverlay();
-                        startClockTicker();
+                    if (autoPicked) {
+                        setAugmentStatus("시간 초과! 왼쪽 증강이 자동 선택되었습니다");
                     } else {
-                        setAugmentWaiting(true);
+                        setAugmentStatus("선택 완료! 상대가 고르는 중...");
                     }
 
-                    if (result?.state) {
-                        currentState = result.state;
-                        renderBoardFromState(result.state);
-                    }
-                } catch (err) {
-                    console.error(err);
-                }
-            }
+                    try {
+                        const result = await submitAugmentSelection(index, autoPicked);
 
-            function renderOwnedAugments() {
-                const enemySlots = document.querySelectorAll('.owned-augment-slot[data-side="enemy"]');
-                const mySlots = document.querySelectorAll('.owned-augment-slot[data-side="my"]');
-
-                enemySlots.forEach((slot, index) => {
-                    slot.innerHTML = "";
-                    slot.className = "owned-augment-slot enemy-slot";
-                    slot.onclick = null;
-
-                    const aug = enemyOwnedAugments[index];
-                    if (!aug) return;
-
-                    slot.classList.add("filled");
-                    slot.classList.add(aug.tier);
-
-                    slot.innerHTML = `
-            <div class="owned-augment-mini-title">${aug.title}</div>
-            <div class="owned-augment-mini-art">
-                ${aug.icon ? `<img src="${aug.icon}" alt="${aug.title}" class="owned-augment-mini-icon">` : ""}
-            </div>
-        `;
-
-                    slot.onclick = () => openOwnedAugmentDetail(aug);
-                });
-
-                mySlots.forEach((slot, index) => {
-                    slot.innerHTML = "";
-                    slot.className = "owned-augment-slot my-slot";
-                    slot.onclick = null;
-
-                    const aug = myOwnedAugments[index];
-                    if (!aug) return;
-
-                    slot.classList.add("filled");
-                    slot.classList.add(aug.tier);
-
-                    slot.innerHTML = `
-            <div class="owned-augment-mini-title">${aug.title}</div>
-            <div class="owned-augment-mini-art">
-                ${aug.icon ? `<img src="${aug.icon}" alt="${aug.title}" class="owned-augment-mini-icon">` : ""}
-            </div>
-        `;
-
-                    slot.onclick = () => openOwnedAugmentDetail(aug);
-                });
-            }
-
-            function openOwnedAugmentDetail(aug) {
-                if (!aug) return;
-
-                const overlay = document.getElementById("ownedAugmentOverlay");
-                const card = document.getElementById("ownedAugmentCard");
-                const title = document.getElementById("ownedAugmentTitle");
-                const desc = document.getElementById("ownedAugmentDesc");
-                const art = document.getElementById("ownedAugmentArt");
-
-                if (!overlay || !card || !title || !desc || !art) {
-                    console.error("owned augment detail elements not found");
-                    return;
-                }
-
-                card.className = "";
-                card.id = "ownedAugmentCard";
-                if (aug.tier) card.classList.add(aug.tier);
-
-                title.innerText = aug.title || "";
-                desc.innerText = aug.description || "";
-                art.innerHTML = aug.icon ? `<img src="${aug.icon}" alt="${aug.title || ''}" class="owned-augment-big-icon">` : "";
-
-                overlay.classList.add("show");
-            }
-
-            function closeOwnedAugmentDetail() {
-                const overlay = document.getElementById("ownedAugmentOverlay");
-                if (overlay) overlay.classList.remove("show");
-            }
-
-            function openDebugAugment() {
-                showAugmentOverlay({
-                    tier: "gold",
-                    myTurn: true,
-                    options: [
-                        {
-                            tier: "gold",
-                            title: "캐슬링 금지",
-                            description: "상대는 이번 게임에서 캐슬링을 할 수 없습니다."
-                        },
-                        {
-                            tier: "gold",
-                            title: "언더 프로모션!!",
-                            description: "상대는 퀸으로 프로모션 할 수 없습니다."
-                        },
-                        {
-                            tier: "gold",
-                            title: "모든 폰 둔화",
-                            description: "상대의 폰은 시작할 때 2칸 전진할 수 없습니다."
+                        if (result?.both_done) {
+                            hideAugmentOverlay();
+                            startClockTicker();
+                        } else {
+                            setAugmentWaiting(true);
                         }
-                    ],
-                    durationMs: 25000
-                });
-            }
 
-            /* ===== init ===== */
-            document.addEventListener("dragstart", (e) => {
-                if (e.target.tagName === "IMG") {
-                    e.preventDefault();
+                        if (result?.state) {
+                            currentState = result.state;
+                            renderBoardFromState(result.state);
+                        }
+                    } catch (err) {
+                        console.error(err);
+                    }
                 }
-            });
 
-            const roomInputEl = document.getElementById("roomInput");
-            if (roomInputEl) {
-                roomInputEl.addEventListener("keydown", (e) => {
-                    if (e.key === "Enter") {
+                function renderOwnedAugments() {
+                    const enemySlots = document.querySelectorAll('.owned-augment-slot[data-side="enemy"]');
+                    const mySlots = document.querySelectorAll('.owned-augment-slot[data-side="my"]');
+
+                    enemySlots.forEach((slot, index) => {
+                        slot.innerHTML = "";
+                        slot.className = "owned-augment-slot enemy-slot";
+                        slot.onclick = null;
+
+                        const aug = enemyOwnedAugments[index];
+                        if (!aug) return;
+
+                        slot.classList.add("filled");
+                        slot.classList.add(aug.tier);
+
+                        slot.innerHTML = `
+            <div class="owned-augment-mini-title">${aug.title}</div>
+            <div class="owned-augment-mini-art">
+                ${aug.icon ? `<img src="${aug.icon}" alt="${aug.title}" class="owned-augment-mini-icon">` : ""}
+            </div>
+        `;
+
+                        slot.onclick = () => openOwnedAugmentDetail(aug);
+                    });
+
+                    mySlots.forEach((slot, index) => {
+                        slot.innerHTML = "";
+                        slot.className = "owned-augment-slot my-slot";
+                        slot.onclick = null;
+
+                        const aug = myOwnedAugments[index];
+                        if (!aug) return;
+
+                        slot.classList.add("filled");
+                        slot.classList.add(aug.tier);
+
+                        slot.innerHTML = `
+            <div class="owned-augment-mini-title">${aug.title}</div>
+            <div class="owned-augment-mini-art">
+                ${aug.icon ? `<img src="${aug.icon}" alt="${aug.title}" class="owned-augment-mini-icon">` : ""}
+            </div>
+        `;
+
+                        slot.onclick = () => openOwnedAugmentDetail(aug);
+                    });
+                }
+
+                function openOwnedAugmentDetail(aug) {
+                    if (!aug) return;
+
+                    const overlay = document.getElementById("ownedAugmentOverlay");
+                    const card = document.getElementById("ownedAugmentCard");
+                    const title = document.getElementById("ownedAugmentTitle");
+                    const desc = document.getElementById("ownedAugmentDesc");
+                    const art = document.getElementById("ownedAugmentArt");
+
+                    if (!overlay || !card || !title || !desc || !art) {
+                        console.error("owned augment detail elements not found");
+                        return;
+                    }
+
+                    card.className = "";
+                    card.id = "ownedAugmentCard";
+                    if (aug.tier) card.classList.add(aug.tier);
+
+                    title.innerText = aug.title || "";
+                    desc.innerText = aug.description || "";
+                    art.innerHTML = aug.icon ? `<img src="${aug.icon}" alt="${aug.title || ''}" class="owned-augment-big-icon">` : "";
+
+                    overlay.classList.add("show");
+                }
+
+                function closeOwnedAugmentDetail() {
+                    const overlay = document.getElementById("ownedAugmentOverlay");
+                    if (overlay) overlay.classList.remove("show");
+                }
+
+                function openDebugAugment() {
+                    showAugmentOverlay({
+                        tier: "gold",
+                        myTurn: true,
+                        options: [
+                            {
+                                tier: "gold",
+                                title: "캐슬링 금지",
+                                description: "상대는 이번 게임에서 캐슬링을 할 수 없습니다."
+                            },
+                            {
+                                tier: "gold",
+                                title: "언더 프로모션!!",
+                                description: "상대는 퀸으로 프로모션 할 수 없습니다."
+                            },
+                            {
+                                tier: "gold",
+                                title: "모든 폰 둔화",
+                                description: "상대의 폰은 시작할 때 2칸 전진할 수 없습니다."
+                            }
+                        ],
+                        durationMs: 25000
+                    });
+                }
+
+                /* ===== init ===== */
+                document.addEventListener("dragstart", (e) => {
+                    if (e.target.tagName === "IMG") {
                         e.preventDefault();
-                        joinRoom();
                     }
                 });
-            }
 
-            ensurePlayerId();
-            renderEmptyBoard();
-            renderOwnedAugments();
-            setClockUI({
-                W: 600,
-                B: 600,
-                running: null,
-                ended: false,
-                last_update: Date.now() / 1000
-            });
+                const roomInputEl = document.getElementById("roomInput");
+                if (roomInputEl) {
+                    roomInputEl.addEventListener("keydown", (e) => {
+                        if (e.key === "Enter") {
+                            e.preventDefault();
+                            joinRoom();
+                        }
+                    });
+                }
 
-            roomId = getRoomFromUrl();
-            updateRoomBox();
-            updateColorBox();
-
-            if (roomId) {
-                joinCurrentRoom().then(() => {
-                    loadBoard();
-                    connectSocket();
+                ensurePlayerId();
+                renderEmptyBoard();
+                renderOwnedAugments();
+                setClockUI({
+                    W: 600,
+                    B: 600,
+                    running: null,
+                    ended: false,
+                    last_update: Date.now() / 1000
                 });
-            }
-        </script>
-        <div id="ownedAugmentOverlay" onclick="closeOwnedAugmentDetail()">
-            <button id="ownedAugmentClose" onclick="event.stopPropagation(); closeOwnedAugmentDetail()">×</button>
 
-            <div id="ownedAugmentCard" class="silver" onclick="event.stopPropagation()">
-                <div id="ownedAugmentTitle"></div>
-                <div id="ownedAugmentArt"></div>
-                <div id="ownedAugmentDesc"></div>
+                setTurnCounterUI(0);
+
+                roomId = getRoomFromUrl();
+                updateRoomBox();
+                updateColorBox();
+
+                if (roomId) {
+                    joinCurrentRoom().then(() => {
+                        loadBoard();
+                        connectSocket();
+                    });
+                }
+
+                function setTurnCounterUI(moveCount) {
+                    const turnBox = document.getElementById("turnCounter");
+                    if (!turnBox) return;
+
+                    const turnNumber = Math.floor(Number(moveCount ?? 0) / 2) + 1;
+                    turnBox.innerText = `턴 수 : ${turnNumber}`;
+                }
+
+                function updateGuardianUI() {
+    const overlay = document.getElementById("guardianOverlay");
+    const statusEl = document.getElementById("guardianStatus");
+    const scoreEl = document.getElementById("guardianScore");
+    const confirmBtn = document.getElementById("guardianConfirmBtn");
+
+    if (!overlay) return;
+
+    if (!guardianMode || !guardianState) {
+        overlay.classList.remove("show");
+        return;
+    }
+
+    overlay.classList.add("show");
+
+    const current = guardianState.current;
+    const currentText = current === "W" ? "백" : current === "B" ? "흑" : "?";
+
+    if (isMyGuardianTurn()) {
+        if (!guardianState.selected_self) {
+            statusEl.innerText = `${currentText}의 균형의 수호자 - 내 기물 선택`;
+        } else {
+            statusEl.innerText = `${currentText}의 균형의 수호자 - 상대 기물 선택`;
+        }
+    } else {
+        statusEl.innerText = `${currentText}의 균형의 수호자 진행 중...`;
+    }
+
+    scoreEl.innerText = `점수: ${guardianState.score || 0} / ${guardianState.max_score || 0}`;
+
+    if (confirmBtn) {
+        confirmBtn.disabled = !isMyGuardianTurn() || !guardianState.selected_self;
+    }
+}
+
+function handleGuardianClick(x, y) {
+    if (!isMyGuardianTurn()) return;
+
+    console.log("guardian click:", x, y);
+}
+
+async function confirmGuardian() {
+    if (!isMyGuardianTurn()) return;
+    console.log("guardian confirm");
+}
+
+            </script>
+            <div id="ownedAugmentOverlay" onclick="closeOwnedAugmentDetail()">
+                <button id="ownedAugmentClose" onclick="event.stopPropagation(); closeOwnedAugmentDetail()">×</button>
+
+                <div id="ownedAugmentCard" class="silver" onclick="event.stopPropagation()">
+                    <div id="ownedAugmentTitle"></div>
+                    <div id="ownedAugmentArt"></div>
+                    <div id="ownedAugmentDesc"></div>
+                </div>
             </div>
-        </div>
 </body>
 
 </html>

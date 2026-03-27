@@ -4,6 +4,9 @@ import random
 # apply 함수들
 # =========================
 
+def apply_countdown(game, player):
+    game.effects[player]["countdown"] = 45
+    
 def apply_no_castling(game, player):
     enemy = 'B' if player == 'W' else 'W'
 
@@ -55,6 +58,25 @@ def apply_reorganize(game, player):
 # =========================
 
 SILVER_AUGMENTS = [
+    {
+    "id": "countdown",
+    "name": "종말의 카운트다운",
+    "desc": "자신의 45턴이 지나면 즉시 승리합니다.",
+    "tier": "silver",
+    "timing": "start",
+    "icon": "static/Augment_icon/Augment_countdown.png",
+    "apply": apply_countdown,
+},
+    
+    {
+    "id": "guardian_of_balance",
+    "name": "균형의 수호자",
+    "desc": "자신의 기물 1개를 선택하고 같은 점수 이하로 상대 기물을 제거합니다.",
+    "tier": "silver",
+    "timing": "start",
+    "icon": "static/Augment_icon/Augment_guardian_of_balance.png",
+    "type": "interactive"
+},
     
     {
         "id": "no_castling",

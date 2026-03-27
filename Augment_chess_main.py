@@ -32,6 +32,8 @@ class Board:
         }
         self.setup()
         self._record_position()
+        self.forced_winner = None
+        self.special_win_reason = None
 
     def setup(self):
         for i in range(8):
@@ -87,12 +89,22 @@ class Board:
                     }
                 consume_pawn_slow = True
 
+        moved_color = piece.color
+
         self._apply_move(x1, y1, x2, y2, promotion)
 
         if consume_pawn_slow:
             self.effects[piece.color]["pawn_slow"] -= 1
             if self.effects[piece.color]["pawn_slow"] <= 0:
                 self.effects[piece.color].pop("pawn_slow", None)
+
+        # 자기 턴 종료 시 카운트다운 감소
+        self.tick_countdown(moved_color)
+
+        # 카운트다운으로 승부가 끝났으면 턴 넘기기 전에 종료
+        if self.forced_winner is not None:
+            self._record_position()
+            return {"success": True}
 
         self.turn = "B" if self.turn == "W" else "W"
         if self.turn == "W":
@@ -421,6 +433,15 @@ class Board:
         return False
 
     def get_game_state(self):
+        if self.forced_winner is not None:
+            return {
+                "check": False,
+                "checkmate": False,
+                "draw": False,
+                "draw_reason": None,
+                "winner": self.forced_winner,
+                "special_win": "countdown",
+            }
         check = self.is_in_check(self.turn)
         moves_exist = self._has_any_legal_move(self.turn)
 
@@ -516,3 +537,14 @@ class Board:
             "winner": self.get_game_state().get("winner"),
             "effects": self.effects,
         }
+        
+    def tick_countdown(self, player):
+        countdown = self.effects[player].get("countdown")
+        if countdown is None:
+            return
+
+        countdown -= 1
+        self.effects[player]["countdown"] = countdown
+
+        if countdown <= 0:
+            self.forced_winner = player
