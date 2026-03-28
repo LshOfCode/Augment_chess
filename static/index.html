@@ -581,6 +581,7 @@
             align-items: center;
             background: rgba(0, 0, 0, 0.82);
             z-index: 2000;
+            pointer-events: none;
         }
 
         #guardianOverlay.show {
@@ -595,6 +596,7 @@
             min-width: 320px;
             text-align: center;
             position: relative;
+            pointer-events: auto;
         }
 
         #guardianStatus {
@@ -1292,26 +1294,26 @@
             }
 
             function hideGuardianOverlay() {
-    const overlay = document.getElementById("guardianOverlay");
-    const clockPanel = document.getElementById("clockPanel");
-    const timerBar = document.getElementById("guardianTimerBar");
+                const overlay = document.getElementById("guardianOverlay");
+                const clockPanel = document.getElementById("clockPanel");
+                const timerBar = document.getElementById("guardianTimerBar");
 
-    guardianMode = false;
-    guardianState = null;
+                guardianMode = false;
+                guardianState = null;
 
-    if (overlay) {
-        overlay.classList.remove("show");
-        overlay.style.display = "none";
-    }
+                if (overlay) {
+                    overlay.classList.remove("show");
+                    overlay.style.display = "none";
+                }
 
-    if (clockPanel) {
-        clockPanel.style.display = "";
-    }
+                if (clockPanel) {
+                    clockPanel.style.display = "";
+                }
 
-    if (timerBar) {
-        timerBar.style.width = "100%";
-    }
-}
+                if (timerBar) {
+                    timerBar.style.width = "100%";
+                }
+            }
 
             function setStatusUI(data) {
                 const status = document.getElementById("status");
@@ -1565,10 +1567,9 @@
                         boardDiv.appendChild(cell);
                     }
                 }
-                updateGuardianUI();
                 if (!augmentOpen) {
-    updateGuardianUI();
-}
+                    updateGuardianUI();
+                }
             }
 
             async function loadBoard() {
@@ -1983,9 +1984,9 @@
                 durationMs = 25000
             } = {}) {
                 const overlay = document.getElementById("augmentOverlay");
-                 hideGuardianOverlay();
+                hideGuardianOverlay();
 
-    augmentOpen = true;
+                augmentOpen = true;
                 const rightPanel = document.getElementById("rightSidePanel");
                 if (!overlay) return;
 
