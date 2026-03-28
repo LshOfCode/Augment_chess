@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from copy import deepcopy
 from dataclasses import dataclass
-from turtle import color
 from typing import Dict, List, Optional, Tuple
 import random
 
