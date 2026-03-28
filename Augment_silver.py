@@ -5,7 +5,7 @@ import random
 # =========================
 
 def apply_countdown(game, player):
-    game.effects[player]["countdown"] = 45
+    game.effects[player]["countdown"] = 40
     
 def apply_no_castling(game, player):
     enemy = 'B' if player == 'W' else 'W'
@@ -61,7 +61,7 @@ SILVER_AUGMENTS = [
     {
     "id": "countdown",
     "name": "종말의 카운트다운",
-    "desc": "자신의 45턴이 지나면 즉시 승리합니다.",
+    "desc": "자신의 40턴이 지나면 즉시 승리합니다.",
     "tier": "silver",
     "timing": ["start"],
     "icon": "static/Augment_icon/Augment_countdown.png",
@@ -73,7 +73,7 @@ SILVER_AUGMENTS = [
     "name": "균형의 수호자",
     "desc": "자신의 기물 1개를 선택하고 같은 점수 이하로 상대 기물을 제거합니다.",
     "tier": "silver",
-    "timing": ["start", "15", "30"],
+    "timing": ["start", "20", "30"],
     "icon": "static/Augment_icon/Augment_guardian_of_balance.png",
     "type": "interactive"
 },
@@ -93,7 +93,7 @@ SILVER_AUGMENTS = [
         "name": "폰 보급",
         "desc": "자신의 폰 앞 열중 무작위 한칸에 폰이 생성됩니다.",
         "tier": "silver",
-        "timing": ["start", "15", "30"],
+        "timing": ["start", "20", "30"],
         "icon": "static/Augment_icon/Augment_pawn_supply.png",
         "apply": apply_pawn_supply,
     },
@@ -133,7 +133,7 @@ SILVER_AUGMENTS = [
         "name": "후퇴하라!",
         "desc": "자신의 모든 폰이 1칸 뒤로 이동할 수 있습니다.(잡기는 불가능)",
         "tier": "silver",
-        "timing": ["start", "15"],
+        "timing": ["start", "20"],
         "icon": "static/Augment_icon/Augment_pawn_retreat.png",
         "apply": apply_pawn_retreat,
     },
@@ -143,7 +143,7 @@ SILVER_AUGMENTS = [
         "name": "재정비",
         "desc": "자신의 비숍 또는 나이트가 잡히면 무작위 빈칸에 폰을 하나 생성합니다.(1회 한정)",
         "tier": "silver",
-        "timing": ["start", "15"],
+        "timing": ["start", "20"],
         "icon": "static/Augment_icon/Augment_reorganize.png",
         "apply": apply_reorganize,
     },

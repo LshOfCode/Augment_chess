@@ -2,6 +2,7 @@ import time
 import random
 from fastapi import WebSocket, WebSocketDisconnect, Body
 import json
+
 from pathlib import Path
 from uuid import uuid4
 from pydantic import BaseModel
@@ -12,6 +13,15 @@ from fastapi.staticfiles import StaticFiles
 
 from Augment_chess_main import Board
 from Augment_silver import SILVER_AUGMENTS
+from Augment_gold import GOLD_AUGMENTS
+from Augment_diamond import DIAMOND_AUGMENTS
+
+ALL_AUGMENTS = (
+    SILVER_AUGMENTS +
+    GOLD_AUGMENTS +
+    DIAMOND_AUGMENTS
+)
+
 
 GUARDIAN_DURATION = 25
 
@@ -141,7 +151,7 @@ def get_player_color(room, player_id):
 
 
 def find_augment_by_id(augment_id: str):
-    for augment in SILVER_AUGMENTS:
+    for augment in ALL_AUGMENTS:
         if augment["id"] == augment_id:
             return augment
     return None
@@ -200,6 +210,35 @@ def serialize_augment(augment):
         "description": augment["desc"],
         "icon": augment.get("icon", ""),
     }
+    
+def get_augments_by_tier(tier: str):
+    if tier == "silver":
+        return SILVER_AUGMENTS
+    if tier == "gold":
+        return GOLD_AUGMENTS
+    if tier == "diamond":
+        return DIAMOND_AUGMENTS
+    return []
+
+
+def get_random_augments_by_tier(tier: str, phase: str, count: int = 3):
+    pool = get_augments_by_tier(tier)
+
+    candidates = []
+    for augment in pool:
+        timing = augment.get("timing", [])
+
+        if isinstance(timing, str):
+            timing = [timing]
+
+        if phase in timing:
+            candidates.append(augment)
+
+    if len(candidates) <= count:
+        return [serialize_augment(a) for a in candidates]
+
+    picked = random.sample(candidates, count)
+    return [serialize_augment(a) for a in picked]
 
 
 @app.get("/")
@@ -249,17 +288,10 @@ async def join_room(room_id: str, data: dict = Body(...)):
         room["time"]["running"] = None
         room["augment"]["active"] = True
 
-        room["augment"]["choices"]["W"] = [
-            serialize_augment(find_augment_by_id("guardian_of_balance")),
-            serialize_augment(find_augment_by_id("countdown")),
-            serialize_augment(find_augment_by_id("pawn_supply")),
-        ]
+        tier = "silver"
 
-        room["augment"]["choices"]["B"] = [
-            serialize_augment(find_augment_by_id("guardian_of_balance")),
-            serialize_augment(find_augment_by_id("pawn_slow")),
-            serialize_augment(find_augment_by_id("reorganize")),
-        ]
+        room["augment"]["choices"]["W"] = get_random_augments_by_tier(tier, "start", 3)
+        room["augment"]["choices"]["B"] = get_random_augments_by_tier(tier, "start", 3)
 
         await broadcast(room_id, {
             "type": "update",
@@ -344,7 +376,7 @@ async def move(room_id: str, data: dict = Body(...)):
     if result["success"]:
         room["move_count"] += 1
 
-        if room["move_count"] in (15, 30):
+        if room["move_count"] in (20, 40):
             room["time"]["running"] = None
             room["time"]["last_update"] = time.time()
 
