@@ -4,14 +4,14 @@ import json
 from pathlib import Path
 from uuid import uuid4
 from pydantic import BaseModel
-from fastapi import Body, FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from Augment_chess_main import Board
-from Augment_chess_main import Board
 from Augment_silver import SILVER_AUGMENTS
+
 GUARDIAN_DURATION = 25
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -29,22 +29,24 @@ app.add_middleware(
 rooms = {}
 connections = {}
 
+
 class AugmentSelectRequest(BaseModel):
     player_id: str
     augment_id: str
+
 
 def create_room_data():
     return {
         "board": Board(),
         "players": {"W": None, "B": None},
         "time": {
-    "W": 600,
-    "B": 600,
-    "last_update": time.time(),
-    "running": None,
-    "ended": False,
-    "winner": None,
-},
+            "W": 600,
+            "B": 600,
+            "last_update": time.time(),
+            "running": None,
+            "ended": False,
+            "winner": None,
+        },
         "rematch": {
             "votes": {"W": False, "B": False},
             "count": 0,
@@ -52,18 +54,12 @@ def create_room_data():
         "augment": {
             "active": False,
             "tier": "gold",
-            "choices": {
-                "W": [],
-                "B": []
-            },
-            "selected": {
-                "W": None,
-                "B": None
-            }
+            "choices": {"W": [], "B": []},
+            "selected": {"W": None, "B": None},
         },
         "owned": {
             "W": [],
-            "B": []
+            "B": [],
         },
         "move_count": 0,
         "guardian": {
@@ -74,8 +70,8 @@ def create_room_data():
             "selected_enemy": [],
             "score": 0,
             "max_score": 0,
-            "start_time": None
-        }
+            "start_time": None,
+        },
     }
 
 
@@ -91,7 +87,6 @@ def build_state(room):
     data["augment"] = augment_state
 
     guardian_state = dict(room["guardian"])
-
     if guardian_state["active"] and guardian_state["start_time"] is not None:
         remain = GUARDIAN_DURATION - (time.time() - guardian_state["start_time"])
         guardian_state["remaining_ms"] = max(0, int(remain * 1000))
@@ -135,11 +130,13 @@ def get_player_color(room, player_id):
         return "B"
     return None
 
+
 def find_augment_by_id(augment_id: str):
     for augment in SILVER_AUGMENTS:
         if augment["id"] == augment_id:
             return augment
     return None
+
 
 def piece_value(name: str) -> int:
     if name == "P":
@@ -152,6 +149,40 @@ def piece_value(name: str) -> int:
         return 9
     return 0
 
+
+def guardian_selection_causes_illegal_check(board, color, self_pos, enemy_positions):
+    removed = []
+
+    sx, sy = self_pos
+    if board.in_bounds(sx, sy):
+        removed.append((sx, sy, board.grid[sy][sx]))
+        board.grid[sy][sx] = None
+
+    for ex, ey in enemy_positions:
+        if board.in_bounds(ex, ey):
+            removed.append((ex, ey, board.grid[ey][ex]))
+            board.grid[ey][ex] = None
+
+    try:
+        enemy_color = "B" if color == "W" else "W"
+
+        my_king_missing = board.find_king(color) is None
+        enemy_king_missing = board.find_king(enemy_color) is None
+        if my_king_missing or enemy_king_missing:
+            return True
+
+        # 양쪽 모두 체크 상태가 되면 선택 불가
+        if board.is_in_check(color):
+            return True
+        if board.is_in_check(enemy_color):
+            return True
+
+        return False
+    finally:
+        for x, y, piece in removed:
+            board.grid[y][x] = piece
+
+
 def serialize_augment(augment):
     return {
         "id": augment["id"],
@@ -160,6 +191,7 @@ def serialize_augment(augment):
         "description": augment["desc"],
         "icon": augment.get("icon", ""),
     }
+
 
 @app.get("/")
 def index():
@@ -204,7 +236,6 @@ async def join_room(room_id: str, data: dict = Body(...)):
     if players["B"] is None:
         players["B"] = player_id
 
-        # 증강 선택 전이니까 시간 멈춤
         room["time"]["last_update"] = time.time()
         room["time"]["running"] = None
         room["augment"]["active"] = True
@@ -223,7 +254,7 @@ async def join_room(room_id: str, data: dict = Body(...)):
 
         await broadcast(room_id, {
             "type": "update",
-            "state": build_state(room)
+            "state": build_state(room),
         })
 
         return {"color": "B"}
@@ -240,6 +271,7 @@ async def get_state(room_id: str):
     update_clock(room)
     await resolve_guardian_timeout(room_id)
     return build_state(room)
+
 
 @app.post("/rooms/{room_id}/move")
 async def move(room_id: str, data: dict = Body(...)):
@@ -286,6 +318,7 @@ async def move(room_id: str, data: dict = Body(...)):
     x1, y1, x2, y2 = data["x1"], data["y1"], data["x2"], data["y2"]
     promotion = data.get("promotion", "Q")
     piece = board.grid[y1][x1]
+
     if piece is None:
         return {
             "result": {"success": False, "message": "거기에 기물이 없음"},
@@ -313,12 +346,12 @@ async def move(room_id: str, data: dict = Body(...)):
             room["augment"]["choices"]["W"] = [
                 {"id": "a1", "tier": "gold", "title": "캐슬링 금지", "description": "..."},
                 {"id": "a2", "tier": "gold", "title": "언더 프로모션!!", "description": "..."},
-                {"id": "a3", "tier": "gold", "title": "폰 둔화", "description": "..."}
+                {"id": "a3", "tier": "gold", "title": "폰 둔화", "description": "..."},
             ]
             room["augment"]["choices"]["B"] = [
                 {"id": "b1", "tier": "gold", "title": "룩 약화", "description": "..."},
                 {"id": "b2", "tier": "gold", "title": "비숍 약화", "description": "..."},
-                {"id": "b3", "tier": "gold", "title": "전장의 안개", "description": "..."}
+                {"id": "b3", "tier": "gold", "title": "전장의 안개", "description": "..."},
             ]
         else:
             room["time"]["running"] = board.turn
@@ -326,7 +359,7 @@ async def move(room_id: str, data: dict = Body(...)):
 
         await broadcast(room_id, {
             "type": "update",
-            "state": build_state(room)
+            "state": build_state(room),
         })
 
     return {"result": result, "state": build_state(room)}
@@ -347,6 +380,7 @@ def reset_room(room_id: str):
 
     return {"success": True}
 
+
 @app.websocket("/ws/{room_id}")
 async def websocket_endpoint(websocket: WebSocket, room_id: str):
     await websocket.accept()
@@ -362,6 +396,7 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str):
     except WebSocketDisconnect:
         connections[room_id].remove(websocket)
 
+
 async def broadcast(room_id: str, message: dict):
     if room_id not in connections:
         return
@@ -370,11 +405,12 @@ async def broadcast(room_id: str, message: dict):
     for ws in connections[room_id]:
         try:
             await ws.send_text(json.dumps(message))
-        except:
+        except Exception:
             dead.append(ws)
 
     for ws in dead:
         connections[room_id].remove(ws)
+
 
 async def resolve_guardian_timeout(room_id: str):
     if room_id not in rooms:
@@ -395,9 +431,6 @@ async def resolve_guardian_timeout(room_id: str):
     board = room["board"]
     color = guardian["current"]
 
-    # 시간이 끝났으면:
-    # 1) 자기 기물 안 골랐으면 그냥 턴 종료
-    # 2) 자기 기물만 골랐으면 그 자기 기물만 제거
     if guardian["selected_self"]:
         sx, sy = guardian["selected_self"]
         if board.in_bounds(sx, sy):
@@ -429,8 +462,9 @@ async def resolve_guardian_timeout(room_id: str):
 
     await broadcast(room_id, {
         "type": "update",
-        "state": build_state(room)
+        "state": build_state(room),
     })
+
 
 def reset_room_with_swap(room_id: str):
     old_room = rooms[room_id]
@@ -476,18 +510,19 @@ async def rematch_room(room_id: str, data: dict = Body(...)):
 
     await broadcast(room_id, {
         "type": "rematch_vote",
-        "state": build_state(room)
+        "state": build_state(room),
     })
 
     if rematch["count"] >= 2:
         reset_room_with_swap(room_id)
         await broadcast(room_id, {
             "type": "update",
-            "state": build_state(rooms[room_id])
+            "state": build_state(rooms[room_id]),
         })
         return {"success": True, "started": True, "state": build_state(rooms[room_id])}
 
     return {"success": True, "started": False, "state": build_state(room)}
+
 
 @app.post("/rooms/{room_id}/augment/select")
 async def select_augment(room_id: str, req: AugmentSelectRequest):
@@ -496,6 +531,8 @@ async def select_augment(room_id: str, req: AugmentSelectRequest):
         raise HTTPException(status_code=404)
 
     color = get_player_color(room, req.player_id)
+    if color is None:
+        raise HTTPException(status_code=403, detail="only players can select augment")
 
     if room["augment"]["selected"][color] is not None:
         raise HTTPException(status_code=400)
@@ -507,7 +544,7 @@ async def select_augment(room_id: str, req: AugmentSelectRequest):
 
     await broadcast(room_id, {
         "type": "update",
-        "state": build_state(room)
+        "state": build_state(room),
     })
 
     both_done = (
@@ -517,7 +554,6 @@ async def select_augment(room_id: str, req: AugmentSelectRequest):
 
     if both_done:
         board = room["board"]
-
         guardian_players = []
 
         for apply_color in ["W", "B"]:
@@ -529,17 +565,18 @@ async def select_augment(room_id: str, req: AugmentSelectRequest):
                 augment = find_augment_by_id(augment_id)
                 if augment is not None:
                     augment["apply"](board, apply_color)
+
         room["guardian"] = {
             "active": len(guardian_players) > 0,
-            "queue": guardian_players,   # ["W", "B"]
+            "queue": guardian_players,
             "current": guardian_players[0] if guardian_players else None,
             "selected_self": None,
             "selected_enemy": [],
             "score": 0,
             "max_score": 0,
-            "start_time": time.time()
+            "start_time": time.time() if guardian_players else None,
         }
-        
+
         room["augment"]["active"] = False
         room["time"]["last_update"] = time.time()
 
@@ -550,23 +587,21 @@ async def select_augment(room_id: str, req: AugmentSelectRequest):
 
         await broadcast(room_id, {
             "type": "update",
-            "state": build_state(room)
+            "state": build_state(room),
         })
+
+
 @app.post("/rooms/{room_id}/guardian/select_self")
 async def guardian_select_self(room_id: str, data: dict = Body(...)):
     if room_id not in rooms:
         raise HTTPException(status_code=404, detail="room not found")
 
     room = rooms[room_id]
-    guardian = room["guardian"]
     await resolve_guardian_timeout(room_id)
     guardian = room["guardian"]
 
     if not guardian["active"]:
         return {"success": False, "state": build_state(room)}
-
-    if not guardian["active"]:
-        raise HTTPException(status_code=400, detail="guardian not active")
 
     player_id = data.get("player_id")
     x = data.get("x")
@@ -585,7 +620,6 @@ async def guardian_select_self(room_id: str, data: dict = Body(...)):
         raise HTTPException(status_code=400, detail="not your guardian turn")
 
     board = room["board"]
-
     if not board.in_bounds(x, y):
         raise HTTPException(status_code=400, detail="out of bounds")
 
@@ -598,10 +632,11 @@ async def guardian_select_self(room_id: str, data: dict = Body(...)):
 
     if piece.name == "K":
         raise HTTPException(status_code=400, detail="king cannot be selected")
-    
+
     if guardian["selected_self"] == [x, y]:
         if guardian["selected_enemy"]:
             raise HTTPException(status_code=400, detail="enemy pieces already selected")
+
         guardian["selected_self"] = None
         guardian["selected_enemy"] = []
         guardian["max_score"] = 0
@@ -609,9 +644,8 @@ async def guardian_select_self(room_id: str, data: dict = Body(...)):
 
         await broadcast(room_id, {
             "type": "update",
-            "state": build_state(room)
+            "state": build_state(room),
         })
-
         return {"success": True, "state": build_state(room)}
 
     guardian["selected_self"] = [x, y]
@@ -621,10 +655,10 @@ async def guardian_select_self(room_id: str, data: dict = Body(...)):
 
     await broadcast(room_id, {
         "type": "update",
-        "state": build_state(room)
+        "state": build_state(room),
     })
-
     return {"success": True, "state": build_state(room)}
+
 
 @app.post("/rooms/{room_id}/guardian/toggle_enemy")
 async def guardian_toggle_enemy(room_id: str, data: dict = Body(...)):
@@ -632,15 +666,11 @@ async def guardian_toggle_enemy(room_id: str, data: dict = Body(...)):
         raise HTTPException(status_code=404, detail="room not found")
 
     room = rooms[room_id]
-    guardian = room["guardian"]
     await resolve_guardian_timeout(room_id)
     guardian = room["guardian"]
 
     if not guardian["active"]:
         return {"success": False, "state": build_state(room)}
-
-    if not guardian["active"]:
-        raise HTTPException(status_code=400, detail="guardian not active")
 
     player_id = data.get("player_id")
     x = data.get("x")
@@ -662,7 +692,6 @@ async def guardian_toggle_enemy(room_id: str, data: dict = Body(...)):
         raise HTTPException(status_code=400, detail="select self piece first")
 
     board = room["board"]
-
     if not board.in_bounds(x, y):
         raise HTTPException(status_code=400, detail="out of bounds")
 
@@ -688,24 +717,33 @@ async def guardian_toggle_enemy(room_id: str, data: dict = Body(...)):
 
         await broadcast(room_id, {
             "type": "update",
-            "state": build_state(room)
+            "state": build_state(room),
         })
-
         return {"success": True, "state": build_state(room)}
 
     # 새로 선택하려는데 점수 초과면 불가
     if guardian["score"] + value > guardian["max_score"]:
         raise HTTPException(status_code=400, detail="score exceeded")
 
+    test_enemy = guardian["selected_enemy"] + [pos]
+
+    if guardian_selection_causes_illegal_check(
+        board,
+        color,
+        guardian["selected_self"],
+        test_enemy,
+    ):
+        raise HTTPException(status_code=400, detail="illegal guardian selection")
+
     guardian["selected_enemy"].append(pos)
     guardian["score"] += value
 
     await broadcast(room_id, {
         "type": "update",
-        "state": build_state(room)
+        "state": build_state(room),
     })
-
     return {"success": True, "state": build_state(room)}
+
 
 @app.post("/rooms/{room_id}/guardian/confirm")
 async def guardian_confirm(room_id: str, data: dict = Body(...)):
@@ -713,15 +751,11 @@ async def guardian_confirm(room_id: str, data: dict = Body(...)):
         raise HTTPException(status_code=404, detail="room not found")
 
     room = rooms[room_id]
-    guardian = room["guardian"]
     await resolve_guardian_timeout(room_id)
     guardian = room["guardian"]
 
     if not guardian["active"]:
         return {"success": False, "state": build_state(room)}
-
-    if not guardian["active"]:
-        raise HTTPException(status_code=400, detail="guardian not active")
 
     player_id = data.get("player_id")
     if not player_id:
@@ -764,14 +798,11 @@ async def guardian_confirm(room_id: str, data: dict = Body(...)):
         guardian["active"] = False
         guardian["current"] = None
         guardian["start_time"] = None
-
         room["time"]["last_update"] = time.time()
         room["time"]["running"] = room["board"].turn
 
     await broadcast(room_id, {
         "type": "update",
-        "state": build_state(room)
+        "state": build_state(room),
     })
-
     return {"success": True, "state": build_state(room)}
-

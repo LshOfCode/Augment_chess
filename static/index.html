@@ -1319,6 +1319,34 @@
                 return guardianMode && guardianState && guardianState.current === myColor;
             }
 
+            function guardianPieceValue(name) {
+                if (name === "P") return 1;
+                if (name === "N" || name === "B") return 3;
+                if (name === "R") return 5;
+                if (name === "Q") return 9;
+                return 0;
+            }
+
+            function canSelectGuardianEnemyPiece(piece, x, y, guardian) {
+                if (!piece) return false;
+                if (piece.color === myColor) return false;
+                if (piece.name === "K") return false;
+
+                const selectedEnemy = guardian.selected_enemy || [];
+                const alreadySelected = selectedEnemy.some(pos => pos[0] === x && pos[1] === y);
+
+                // 이미 고른 적 기물은 취소용으로 다시 누를 수 있어야 함
+                if (alreadySelected) return true;
+
+                const remain = Number(guardian.max_score || 0) - Number(guardian.score || 0);
+                const value = guardianPieceValue(piece.name);
+
+                // 남은 점수보다 비싸면 선택 불가
+                if (value > remain) return false;
+
+                return true;
+            }
+
             function renderBoardFromState(data) {
                 currentState = data;
                 currentBoard = data.board;
@@ -1427,20 +1455,19 @@
 
                         if (guardian?.active && isMyGuardianTurn() && piece) {
                             const isMyPiece = piece.color === myColor;
-                            const isEnemyPiece = piece.color !== myColor;
                             const isKing = piece.name === "K";
 
                             let isSelectable = false;
 
-                            // 1) 아직 내 기물을 안 골랐으면:
-                            //    내 기물만 선택 가능, 왕은 불가
+                            // 아직 내 기물을 안 골랐으면:
+                            // 내 기물만 선택 가능, 왕은 불가
                             if (!guardian.selected_self) {
                                 isSelectable = isMyPiece && !isKing;
                             }
-                            // 2) 이미 내 기물을 골랐으면:
-                            //    상대 기물만 선택 가능, 왕은 불가
+                            // 이미 내 기물을 골랐으면:
+                            // 상대 기물 중에서 남은 점수 이내만 선택 가능
                             else {
-                                isSelectable = isEnemyPiece && !isKing;
+                                isSelectable = canSelectGuardianEnemyPiece(piece, x, y, guardian);
                             }
 
                             if (isSelectable) {
@@ -1451,7 +1478,6 @@
                                 cell.classList.add("guardian-dim");
                             }
                         }
-
                         if (piece) {
                             const img = document.createElement("img");
                             img.src = `pieces/${piece.color.toLowerCase()}${piece.name.toLowerCase()}.png`;
