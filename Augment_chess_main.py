@@ -268,6 +268,8 @@ class Board:
             return (x1 == x2 or y1 == y2) and self._clear(x1, y1, x2, y2)
 
         if piece.name == "Q":
+            if self.effects[piece.color].get("sealed_queen"):
+                return False
             return (adx == ady or x1 == x2 or y1 == y2) and self._clear(x1, y1, x2, y2)
 
         if piece.name == "K":

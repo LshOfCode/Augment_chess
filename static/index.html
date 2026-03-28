@@ -208,15 +208,34 @@
             display: flex;
         }
 
+        #ownedAugmentClose {
+            position: fixed;
+            top: 28px;
+            right: 34px;
+            width: 68px;
+            height: 68px;
+            border: none;
+            border-radius: 16px;
+            font-size: 36px;
+            font-weight: bold;
+            background: rgba(255, 255, 255, 0.18);
+            color: white;
+            cursor: pointer;
+        }
+
         #ownedAugmentCard {
+            isolation: isolate;
             width: 370px;
-            height: 450px;
+            height: 600px;
             border-radius: 30px;
+            position: relative;
+            overflow: hidden;
+            border: 3px solid rgba(255, 255, 255, 0.24);
+            box-shadow: 0 16px 36px rgba(0, 0, 0, 0.34);
+            color: #201500;
             padding: 20px;
             box-sizing: border-box;
-            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
-            display: flex;
-            flex-direction: column;
+            grid-template-rows: 70px 320px 1fr;
         }
 
         #ownedAugmentCard.silver {
@@ -234,65 +253,75 @@
             color: #07181d;
         }
 
-        #ownedAugmentClose {
-            position: fixed;
-            top: 28px;
-            right: 34px;
-            width: 68px;
-            height: 68px;
-            border: none;
-            border-radius: 16px;
-            font-size: 36px;
-            font-weight: bold;
-            background: rgba(255, 255, 255, 0.18);
-            color: white;
-            cursor: pointer;
+        #ownedAugmentCard::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(circle at top center, rgba(255, 255, 255, 0.20), transparent 34%),
+                linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent 28%);
+            pointer-events: none;
+        }
+
+        #ownedAugmentCard::after {
+            content: "";
+            position: absolute;
+            inset: -18%;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.16), transparent 58%);
+            opacity: 1;
+            pointer-events: none;
+        }
+
+        #ownedAugmentCardBody {
+            position: relative;
+            z-index: 1;
+            display: grid;
+            grid-template-rows: 70px 320px 1fr;
+            row-gap: 12px;
+            height: 100%;
+            padding: 0;
         }
 
         #ownedAugmentTitle {
-            min-height: 70px;
             font-size: 34px;
             font-weight: 900;
             line-height: 1.05;
             word-break: keep-all;
             letter-spacing: -1px;
-            margin: 0 0 12px 0;
+            margin: 0;
             white-space: pre-line;
             display: flex;
             align-items: flex-start;
             justify-content: flex-start;
         }
 
-        #ownedAugmentDesc {
-            flex: 1;
+        #ownedAugmentArt {
+            border-radius: 22px;
+            background: rgba(255, 255, 255, 0.06);
+            box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.10);
             min-height: 0;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #ownedAugmentDesc {
             font-size: 22px;
             font-weight: 900;
             line-height: 1.18;
             word-break: keep-all;
             letter-spacing: -0.5px;
+            color: #2a1d00;
             background: rgba(255, 255, 255, 0.92);
             border-radius: 22px;
             padding: 18px;
-            color: #222;
             box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.55);
+            margin: 0;
             white-space: pre-line;
             display: flex;
             align-items: flex-start;
             overflow: hidden;
-        }
-
-        #ownedAugmentArt {
-            height: 160px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 12px;
-            border-radius: 22px;
-            overflow: hidden;
-            background: rgba(255, 255, 255, 0.06);
-            box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.10);
-            flex-shrink: 0;
         }
 
         .owned-augment-big-icon {
@@ -481,6 +510,7 @@
         }
 
         /* ===== 증강 오버레이 ===== */
+
         #augmentOverlay {
             position: fixed;
             inset: 0;
@@ -555,6 +585,124 @@
             background: linear-gradient(90deg, #056d91 0%, #1497c7 35%, #37c4ea 70%, #d5fbff 100%);
         }
 
+        .augment-card .card-aura {
+            position: absolute;
+            inset: -16px;
+            border-radius: 38px;
+            pointer-events: none;
+            z-index: 0;
+            opacity: 0;
+            transform: scale(0.9) rotate(0deg);
+            transition: opacity 0.35s ease, transform 0.45s ease;
+        }
+
+        .augment-card .card-aura::before,
+        .augment-card .card-aura::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            border-radius: 38px;
+        }
+
+        .augment-card .card-aura::before {
+            background:
+                conic-gradient(from 0deg,
+                    rgba(255, 255, 255, 0.00) 0deg,
+                    rgba(255, 255, 255, 0.45) 40deg,
+                    rgba(255, 255, 255, 0.00) 80deg,
+                    rgba(255, 255, 255, 0.00) 180deg,
+                    rgba(255, 255, 255, 0.32) 230deg,
+                    rgba(255, 255, 255, 0.00) 280deg,
+                    rgba(255, 255, 255, 0.00) 360deg);
+            filter: blur(10px);
+            animation: cardAuraSpin 3.2s linear infinite;
+        }
+
+        .augment-card .card-aura::after {
+            inset: 10px;
+            border: 2px solid rgba(255, 255, 255, 0.26);
+            animation: cardAuraSpinReverse 4.2s linear infinite;
+        }
+
+        .augment-card.show .card-aura {
+            opacity: 1;
+            transform: scale(1) rotate(0deg);
+        }
+
+        .augment-card .card-flash {
+            position: absolute;
+            inset: -8px;
+            border-radius: 34px;
+            pointer-events: none;
+            z-index: 3;
+            opacity: 0;
+            background:
+                radial-gradient(circle at center,
+                    rgba(255, 255, 255, 0.95) 0%,
+                    rgba(255, 255, 255, 0.55) 22%,
+                    rgba(255, 255, 255, 0.10) 48%,
+                    rgba(255, 255, 255, 0.00) 72%);
+        }
+
+        .augment-card.flash-in .card-flash {
+            animation: cardFlashBurst 0.42s ease-out 1;
+        }
+
+        .augment-card.silver .card-aura::before {
+            box-shadow:
+                0 0 18px rgba(220, 230, 255, 0.35),
+                0 0 42px rgba(220, 230, 255, 0.20);
+        }
+
+        .augment-card.gold .card-aura::before {
+            box-shadow:
+                0 0 18px rgba(255, 220, 120, 0.40),
+                0 0 42px rgba(255, 220, 120, 0.22);
+        }
+
+        .augment-card.diamond .card-aura::before {
+            box-shadow:
+                0 0 18px rgba(120, 245, 255, 0.40),
+                0 0 42px rgba(120, 245, 255, 0.22);
+        }
+
+        @keyframes cardAuraSpin {
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        @keyframes cardAuraSpinReverse {
+            from {
+                transform: rotate(360deg);
+            }
+
+            to {
+                transform: rotate(0deg);
+            }
+        }
+
+        @keyframes cardFlashBurst {
+            0% {
+                opacity: 0;
+                transform: scale(0.72);
+            }
+
+            25% {
+                opacity: 1;
+                transform: scale(1.08);
+            }
+
+            100% {
+                opacity: 0;
+                transform: scale(1.22);
+            }
+        }
+
         #augmentCards {
             position: absolute;
             top: 220px;
@@ -611,7 +759,8 @@
         }
 
         .augment-card {
-            width: 370px;
+            isolation: isolate;
+            width: 400px;
             height: 450px;
             border-radius: 30px;
             position: relative;
@@ -906,6 +1055,7 @@
                 <div id="augmentTimer">
                     <div id="augmentBar" class="silver"></div>
                 </div>
+
                 <div id="augmentCards"></div>
             </div>
         </div>
@@ -1831,14 +1981,16 @@
                 card.dataset.tier = tier;
 
                 card.innerHTML = `
-        <div class="augment-card-body">
-            <div class="augment-card-title">${title}</div>
-            <div class="augment-card-art">
-                ${icon ? `<img src="${icon}" alt="${title}" class="augment-card-icon">` : ""}
-            </div>
-            <div class="augment-card-desc">${description}</div>
+    <div class="card-aura"></div>
+    <div class="card-flash"></div>
+    <div class="augment-card-body">
+        <div class="augment-card-title">${title}</div>
+        <div class="augment-card-art">
+            ${icon ? `<img src="${icon}" alt="${title}" class="augment-card-icon">` : ""}
         </div>
-    `;
+        <div class="augment-card-desc">${description}</div>
+    </div>
+`;
 
                 card.onclick = () => selectAugment(index);
                 return card;
@@ -1847,6 +1999,25 @@
             function setAugmentStatus(text) {
                 const el = document.getElementById("augmentStatus");
                 if (el) el.innerText = text;
+            }
+
+            function setAugmentWaiting(isWaiting) {
+                if (isWaiting) {
+                    setAugmentStatus("선택 완료! 상대가 고르는 중...");
+                } else {
+                    setAugmentStatus("증강을 선택하세요");
+                }
+
+                if (isWaiting) {
+                    clearAugmentTimer();
+                    disableAugmentCards();
+
+                    const bar = document.getElementById("augmentBar");
+                    if (bar) {
+                        bar.style.transition = "none";
+                        bar.style.width = "100%";
+                    }
+                }
             }
 
             function clearAugmentTimer() {
@@ -1954,7 +2125,7 @@
                         bar.style.transition = "none";
                         bar.style.width = "100%";
                     }
-                }, 100);
+                }, 700);
             }
 
             function hideAugmentOverlay() {
@@ -2430,9 +2601,11 @@
             <button id="ownedAugmentClose" onclick="event.stopPropagation(); closeOwnedAugmentDetail()">×</button>
 
             <div id="ownedAugmentCard" class="silver" onclick="event.stopPropagation()">
-                <div id="ownedAugmentTitle"></div>
-                <div id="ownedAugmentArt"></div>
-                <div id="ownedAugmentDesc"></div>
+                <div id="ownedAugmentCardBody">
+                    <div id="ownedAugmentTitle"></div>
+                    <div id="ownedAugmentArt"></div>
+                    <div id="ownedAugmentDesc"></div>
+                </div>
             </div>
         </div>
 </body>

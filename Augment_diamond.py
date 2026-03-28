@@ -4,14 +4,28 @@ import random
 # apply 함수들 (더미)
 # =========================
 
-def apply_diamond_dummy_1(game, player):
-    return
+def apply_bullet_game(game, player):
+    enemy = "B" if player == "W" else "W"
+    game.effects[enemy]["increment"] = 5
 
-def apply_diamond_dummy_2(game, player):
-    return
+def apply_thanos(game, player):
+    for y in range(8):
+        for x in range(8):
+            piece = game.grid[y][x]
+            if piece is None:
+                continue
 
-def apply_diamond_dummy_3(game, player):
-    return
+            # 양측 킹은 제거 제외
+            if piece.name == "K":
+                continue
+
+            # 자신의 폰은 제거 제외
+            if piece.color == player and piece.name == "P":
+                continue
+
+            # 나머지는 각각 50% 확률로 제거
+            if random.random() < 0.5:
+                game.grid[y][x] = None
 
 def apply_diamond_dummy_4(game, player):
     return
@@ -26,38 +40,29 @@ def apply_diamond_dummy_5(game, player):
 
 DIAMOND_AUGMENTS = [
     {
-        "id": "diamond_dummy_1",
-        "name": "다이아 더미 1",
-        "desc": "다이아 더미 증강 1번입니다.",
-        "tier": "diamond",
-        "timing": ["start", "20", "40"],
-        "icon": "static/Augment_icon/Augment_diamond_dummy_1.png",
-        "apply": apply_diamond_dummy_1,
+    "id": "bullet_game",
+    "name": "불렛 게임",
+    "desc": "상대의 시간을 9분 제거합니다. 상대는 자신의 턴을 둘때마다 5초씩 시 얻습니다.",
+    "tier": "diamond",
+    "timing": ["start"],
+    "icon": "static/Augment_icon/Augment_bullet_game.png",
+    "apply": apply_bullet_game,
     },
     {
-        "id": "diamond_dummy_2",
-        "name": "다이아 더미 2",
-        "desc": "다이아 더미 증강 2번입니다.",
-        "tier": "diamond",
-        "timing": ["start", "20", "40"],
-        "icon": "static/Augment_icon/Augment_diamond_dummy_2.png",
-        "apply": apply_diamond_dummy_2,
-    },
-    {
-        "id": "diamond_dummy_3",
-        "name": "다이아 더미 3",
-        "desc": "다이아 더미 증강 3번입니다.",
-        "tier": "diamond",
-        "timing": ["start", "20", "40"],
-        "icon": "static/Augment_icon/Augment_diamond_dummy_3.png",
-        "apply": apply_diamond_dummy_3,
-    },
+    "id": "thanos",
+    "name": "타노스",
+    "desc": "자신의 폰과 양측의 킹을 제외한 모든 기물은 각각 50% 확률로 제거됩니다.",
+    "tier": "diamond",
+    "timing": ["start", "2", "4"],
+    "icon": "static/Augment_icon/Augment_thanos.png",
+    "apply": apply_thanos,
+},
     {
         "id": "diamond_dummy_4",
         "name": "다이아 더미 4",
         "desc": "다이아 더미 증강 4번입니다.",
         "tier": "diamond",
-        "timing": ["start", "20", "40"],
+        "timing": ["start", "2", "4"],
         "icon": "static/Augment_icon/Augment_diamond_dummy_4.png",
         "apply": apply_diamond_dummy_4,
     },
@@ -66,7 +71,7 @@ DIAMOND_AUGMENTS = [
         "name": "다이아 더미 5",
         "desc": "다이아 더미 증강 5번입니다.",
         "tier": "diamond",
-        "timing": ["start", "20", "40"],
+        "timing": ["start", "2", "4"],
         "icon": "static/Augment_icon/Augment_diamond_dummy_5.png",
         "apply": apply_diamond_dummy_5,
     },

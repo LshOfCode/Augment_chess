@@ -49,10 +49,14 @@ class AugmentSelectRequest(BaseModel):
 def create_room_data():
     tiers = ["silver", "gold", "diamond"]
 
-    augment_tiers = [
+    random_two = [
         random.choice(tiers),
-        random.choice(tiers)
+        random.choice(tiers),
     ]
+
+    augment_plan = random_two + ["gold"]
+    random.shuffle(augment_plan)
+
     return {
         "board": Board(),
         "players": {"W": None, "B": None},
@@ -71,8 +75,9 @@ def create_room_data():
         
         "augment": {
             "active": False,
-            "tier_queue": augment_tiers,
+            "plan": augment_plan,
             "current_index": 0,
+            "tier": None,
             "choices": {"W": [], "B": []},
             "selected": {"W": None, "B": None},
         },
@@ -240,6 +245,39 @@ def get_random_augments_by_tier(tier: str, phase: str, count: int = 3):
     picked = random.sample(candidates, count)
     return [serialize_augment(a) for a in picked]
 
+def get_random_augment_choices_for_both_players(tier: str, phase: str, count: int = 3):
+    w_choices = get_random_augments_by_tier(tier, phase, count)
+
+    banned_ids_for_b = set()
+
+    # countdown이 W에 있으면 B에서는 금지
+    if any(aug["id"] == "countdown" for aug in w_choices):
+        banned_ids_for_b.add("countdown")
+
+    pool = get_augments_by_tier(tier)
+
+    candidates = []
+    for augment in pool:
+        timing = augment.get("timing", [])
+
+        if isinstance(timing, str):
+            timing = [timing]
+
+        if phase not in timing:
+            continue
+
+        if augment["id"] in banned_ids_for_b:
+            continue
+
+        candidates.append(augment)
+
+    if len(candidates) <= count:
+        b_choices = [serialize_augment(a) for a in candidates]
+    else:
+        picked = random.sample(candidates, count)
+        b_choices = [serialize_augment(a) for a in picked]
+
+    return w_choices, b_choices
 
 @app.get("/")
 def index():
@@ -288,10 +326,14 @@ async def join_room(room_id: str, data: dict = Body(...)):
         room["time"]["running"] = None
         room["augment"]["active"] = True
 
-        tier = "silver"
+        tier_index = room["augment"]["current_index"]
+        tier = room["augment"]["plan"][tier_index]
+        room["augment"]["tier"] = tier
+        room["augment"]["current_index"] += 1
 
-        room["augment"]["choices"]["W"] = get_random_augments_by_tier(tier, "start", 3)
-        room["augment"]["choices"]["B"] = get_random_augments_by_tier(tier, "start", 3)
+        w_choices, b_choices = get_random_augment_choices_for_both_players(tier, "start", 3)
+        room["augment"]["choices"]["W"] = w_choices
+        room["augment"]["choices"]["B"] = b_choices
 
         await broadcast(room_id, {
             "type": "update",
@@ -375,8 +417,13 @@ async def move(room_id: str, data: dict = Body(...)):
     result = board.move_piece_web(x1, y1, x2, y2, promotion)
     if result["success"]:
         room["move_count"] += 1
+        
+        increment = board.effects[player_color].get("increment", 0)
+        if increment > 0:
+            room["time"][player_color] += increment
+            
+        if room["move_count"] in (2, 4):
 
-        if room["move_count"] in (20, 40):
             room["time"]["running"] = None
             room["time"]["last_update"] = time.time()
 
@@ -384,20 +431,21 @@ async def move(room_id: str, data: dict = Body(...)):
             room["augment"]["selected"]["W"] = None
             room["augment"]["selected"]["B"] = None
 
-            room["augment"]["choices"]["W"] = [
-                {"id": "a1", "tier": "gold", "title": "캐슬링 금지", "description": "..."},
-                {"id": "a2", "tier": "gold", "title": "언더 프로모션!!", "description": "..."},
-                {"id": "a3", "tier": "gold", "title": "폰 둔화", "description": "..."},
-            ]
-            room["augment"]["choices"]["B"] = [
-                {"id": "b1", "tier": "gold", "title": "룩 약화", "description": "..."},
-                {"id": "b2", "tier": "gold", "title": "비숍 약화", "description": "..."},
-                {"id": "b3", "tier": "gold", "title": "전장의 안개", "description": "..."},
-            ]
+            phase = str(room["move_count"])  # "20" or "40"
+
+            tier_index = room["augment"]["current_index"]
+            tier = room["augment"]["plan"][tier_index]
+            room["augment"]["tier"] = tier
+            room["augment"]["current_index"] += 1
+
+            w_choices, b_choices = get_random_augment_choices_for_both_players(tier, phase, 3)
+            room["augment"]["choices"]["W"] = w_choices
+            room["augment"]["choices"]["B"] = b_choices
+
         else:
             room["time"]["running"] = board.turn
             room["time"]["last_update"] = time.time()
-
+            
         await broadcast(room_id, {
             "type": "update",
             "state": build_state(room),
@@ -598,10 +646,38 @@ async def select_augment(room_id: str, req: AugmentSelectRequest):
         guardian_players = []
 
         for apply_color in ["W", "B"]:
+            board.effects[apply_color].pop("sealed_queen", None)
+            
             augment_id = room["augment"]["selected"][apply_color]
+            enemy_color = "B" if apply_color == "W" else "W"
 
             if augment_id == "guardian_of_balance":
                 guardian_players.append(apply_color)
+
+            elif augment_id == "blitz_game":
+                room["time"][enemy_color] = max(0, room["time"][enemy_color] - 420)
+
+                if room["time"][enemy_color] <= 0:
+                    room["time"][enemy_color] = 0
+                    room["time"]["ended"] = True
+                    room["time"]["winner"] = apply_color
+
+                augment = find_augment_by_id(augment_id)
+                if augment is not None:
+                    augment["apply"](board, apply_color)
+
+            elif augment_id == "bullet_game":
+                room["time"][enemy_color] = max(0, room["time"][enemy_color] - 540)
+
+                if room["time"][enemy_color] <= 0:
+                    room["time"][enemy_color] = 0
+                    room["time"]["ended"] = True
+                    room["time"]["winner"] = apply_color
+
+                augment = find_augment_by_id(augment_id)
+                if augment is not None:
+                    augment["apply"](board, apply_color)
+
             else:
                 augment = find_augment_by_id(augment_id)
                 if augment is not None:
@@ -630,6 +706,11 @@ async def select_augment(room_id: str, req: AugmentSelectRequest):
             "type": "update",
             "state": build_state(room),
         })
+        
+    return {
+        "both_done": both_done,
+        "state": build_state(room),
+    }
 
 
 @app.post("/rooms/{room_id}/guardian/select_self")
