@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 from dataclasses import dataclass
+from turtle import color
 from typing import Dict, List, Optional, Tuple
 import random
 
@@ -366,7 +367,14 @@ class Board:
                         moves.append((xx, yy))
 
         return moves
-
+    def find_king(self, color: str):
+        for y in range(8):
+            for x in range(8):
+                p = self.grid[y][x]
+                if p is not None and p.name == "K" and p.color == color:
+                    return (x, y)
+        return None
+    
     def is_in_check(self, color: str) -> bool:
         king_pos = None
         for y in range(8):
