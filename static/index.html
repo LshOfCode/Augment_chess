@@ -1566,6 +1566,9 @@
                     }
                 }
                 updateGuardianUI();
+                if (!augmentOpen) {
+    updateGuardianUI();
+}
             }
 
             async function loadBoard() {
@@ -1980,6 +1983,9 @@
                 durationMs = 25000
             } = {}) {
                 const overlay = document.getElementById("augmentOverlay");
+                 hideGuardianOverlay();
+
+    augmentOpen = true;
                 const rightPanel = document.getElementById("rightSidePanel");
                 if (!overlay) return;
 
