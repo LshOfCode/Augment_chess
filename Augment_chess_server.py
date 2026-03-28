@@ -606,7 +606,6 @@ async def guardian_select_self(room_id: str, data: dict = Body(...)):
         guardian["selected_enemy"] = []
         guardian["max_score"] = 0
         guardian["score"] = 0
-        guardian["start_time"] = time.time()
 
         await broadcast(room_id, {
             "type": "update",
@@ -619,7 +618,6 @@ async def guardian_select_self(room_id: str, data: dict = Body(...)):
     guardian["selected_enemy"] = []
     guardian["max_score"] = piece_value(piece.name)
     guardian["score"] = 0
-    guardian["start_time"] = time.time()
 
     await broadcast(room_id, {
         "type": "update",
@@ -688,8 +686,6 @@ async def guardian_toggle_enemy(room_id: str, data: dict = Body(...)):
         if guardian["score"] < 0:
             guardian["score"] = 0
 
-        guardian["start_time"] = time.time()
-
         await broadcast(room_id, {
             "type": "update",
             "state": build_state(room)
@@ -703,7 +699,6 @@ async def guardian_toggle_enemy(room_id: str, data: dict = Body(...)):
 
     guardian["selected_enemy"].append(pos)
     guardian["score"] += value
-    guardian["start_time"] = time.time()
 
     await broadcast(room_id, {
         "type": "update",
