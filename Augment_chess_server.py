@@ -1,4 +1,5 @@
 import time
+import random
 from fastapi import WebSocket, WebSocketDisconnect, Body
 import json
 from pathlib import Path
@@ -36,6 +37,12 @@ class AugmentSelectRequest(BaseModel):
 
 
 def create_room_data():
+    tiers = ["silver", "gold", "diamond"]
+
+    augment_tiers = [
+        random.choice(tiers),
+        random.choice(tiers)
+    ]
     return {
         "board": Board(),
         "players": {"W": None, "B": None},
@@ -51,9 +58,11 @@ def create_room_data():
             "votes": {"W": False, "B": False},
             "count": 0,
         },
+        
         "augment": {
             "active": False,
-            "tier": "gold",
+            "tier_queue": augment_tiers,
+            "current_index": 0,
             "choices": {"W": [], "B": []},
             "selected": {"W": None, "B": None},
         },
@@ -335,7 +344,7 @@ async def move(room_id: str, data: dict = Body(...)):
     if result["success"]:
         room["move_count"] += 1
 
-        if room["move_count"] in (20, 40):
+        if room["move_count"] in (15, 30):
             room["time"]["running"] = None
             room["time"]["last_update"] = time.time()
 
