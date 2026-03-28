@@ -1067,9 +1067,12 @@
             let ownedAugments = [];
             let enemyOwnedAugments = [];
             let myOwnedAugments = [];
+            
+            /* ===== guardian state ===== */
             let guardianMode = false;
             let guardianState = null;
             let guardianTimerVisual = null;
+            let guardianTimerStartClient = 0;
 
             const GUARDIAN_DURATION_MS = 25000;
 
@@ -2272,32 +2275,52 @@
     }
 }
 
-function startGuardianTimerVisual() {
-    stopGuardianTimerVisual();
+            function stopGuardianTimerVisual() {
+                if (guardianTimerVisual) {
+                    clearInterval(guardianTimerVisual);
+                    guardianTimerVisual = null;
+                }
+                guardianTimerStartClient = 0;
+            }
 
-    const timerBar = document.getElementById("guardianTimerBar");
-    if (!timerBar) return;
-    if (!guardianMode || !guardianState?.active) {
-        timerBar.style.width = "100%";
-        return;
-    }
+            function startGuardianTimerVisual() {
+                stopGuardianTimerVisual();
 
-    guardianTimerVisual = setInterval(() => {
-        if (!guardianMode || !guardianState?.active) {
-            timerBar.style.width = "100%";
-            stopGuardianTimerVisual();
-            return;
-        }
+                const timerBar = document.getElementById("guardianTimerBar");
+                if (!timerBar) return;
 
-        const remain = Math.max(
-            0,
-            Number(guardianState.remaining_ms ?? GUARDIAN_DURATION_MS)
-        );
+                if (!guardianMode || !guardianState?.active) {
+                    timerBar.style.width = "100%";
+                    return;
+                }
 
-        const ratio = remain / GUARDIAN_DURATION_MS;
-        timerBar.style.width = `${ratio * 100}%`;
-    }, 100);
-}
+                const baseRemain = Math.max(
+                    0,
+                    Number(guardianState.remaining_ms ?? GUARDIAN_DURATION_MS)
+                );
+
+                guardianTimerStartClient = Date.now();
+
+                timerBar.style.width = `${(baseRemain / GUARDIAN_DURATION_MS) * 100}%`;
+
+                guardianTimerVisual = setInterval(() => {
+                    if (!guardianMode || !guardianState?.active) {
+                        timerBar.style.width = "100%";
+                        stopGuardianTimerVisual();
+                        return;
+                    }
+
+                    const elapsed = Date.now() - guardianTimerStartClient;
+                    const remain = Math.max(0, baseRemain - elapsed);
+                    const ratio = remain / GUARDIAN_DURATION_MS;
+
+                    timerBar.style.width = `${ratio * 100}%`;
+
+                    if (remain <= 0) {
+                        stopGuardianTimerVisual();
+                    }
+                }, 100);
+            }
 
             function updateGuardianUI() {
                 const overlay = document.getElementById("guardianOverlay");
