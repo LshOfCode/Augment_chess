@@ -27,18 +27,18 @@
         }
 
         body {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    margin: 0;
-    padding: 24px 16px 20px;
-    height: 100vh;
-    box-sizing: border-box;
-    background: #222;
-    color: white;
-    font-family: Arial, sans-serif;
-    overflow: hidden;
-}
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            padding: 24px 16px 20px;
+            height: 100vh;
+            box-sizing: border-box;
+            background: #222;
+            color: white;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+        }
 
         #topbar {
             display: flex;
@@ -305,11 +305,12 @@
 
         /* ===== 보드 ===== */
         #boardWrap {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
-}
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+        }
+
         #guardianTimerBar {
             position: absolute;
             top: 0;
@@ -570,32 +571,32 @@
         }
 
         #guardianOverlay {
-    position: fixed;
-    inset: 0;
-    display: none;
-    justify-content: center;
-    align-items: center;
-    background: transparent;
-    z-index: 2000;
-    pointer-events: none;
-}
+            position: fixed;
+            inset: 0;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            background: transparent;
+            z-index: 2000;
+            pointer-events: none;
+        }
 
         #guardianOverlay.show {
             display: flex;
         }
 
         #guardianPanel {
-    background: white;
-    color: black;
-    border-radius: 16px;
-    padding: 16px 18px;
-    width: 180px;
-    min-width: 180px;
-    text-align: center;
-    position: relative;
-    pointer-events: auto;
-    box-sizing: border-box;
-}
+            background: white;
+            color: black;
+            border-radius: 16px;
+            padding: 16px 18px;
+            width: 180px;
+            min-width: 180px;
+            text-align: center;
+            position: relative;
+            pointer-events: auto;
+            box-sizing: border-box;
+        }
 
         #guardianStatus {
             font-size: 22px;
@@ -799,28 +800,48 @@
 
         /* ===== guardian 레이어 순서 ===== */
         body.guardian-active #topbar,
-body.guardian-active #status,
-body.guardian-active #leftAugmentColumn,
-body.guardian-active #rightSidePanel
-body.guardian-active #boardWrap {
-    filter: none;
-    position: relative;
-    z-index: 1500;
-    filter: blur(5px) brightness(0.45);
-    pointer-events: none;
-}
+        body.guardian-active #status,
+        body.guardian-active #leftAugmentColumn,
+        body.guardian-active #rightSidePanel {
+            position: relative;
+            z-index: 1500;
+            filter: blur(2px) brightness(0.6);
+            pointer-events: none;
+        }
+
+        /* 보드는 절대 흐리지 않기 */
+        body.guardian-active #boardWrap {
+            filter: none;
+        }
 
         /* 가디언 패널은 보드보다 위에 띄워야 안 가려짐 */
-       body.guardian-active #guardianPanel {
-    position: fixed;
-    top: 50%;
-    left: calc(50% + 320px);
-    transform: translateY(-50%);
-    z-index: 3200;
-}
+        body.guardian-active #guardianPanel {
+            position: fixed;
+            top: 50%;
+            left: calc(50% + 320px);
+            transform: translateY(-50%);
+            z-index: 3200;
+        }
 
+        .guardian-glow {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
 
+            background: radial-gradient(circle,
+                    rgba(255, 255, 255, 0.45) 0%,
+                    rgba(255, 255, 255, 0.25) 40%,
+                    rgba(255, 255, 255, 0.08) 70%,
+                    transparent 100%);
 
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .guardian-dim {
+            filter: brightness(0.55);
+        }
     </style>
 </head>
 
@@ -1401,6 +1422,33 @@ body.guardian-active #boardWrap {
                                 const dot = document.createElement("div");
                                 dot.className = "move-dot";
                                 cell.appendChild(dot);
+                            }
+                        }
+
+                        if (guardian?.active && isMyGuardianTurn() && piece) {
+                            const isMyPiece = piece.color === myColor;
+                            const isEnemyPiece = piece.color !== myColor;
+                            const isKing = piece.name === "K";
+
+                            let isSelectable = false;
+
+                            // 1) 아직 내 기물을 안 골랐으면:
+                            //    내 기물만 선택 가능, 왕은 불가
+                            if (!guardian.selected_self) {
+                                isSelectable = isMyPiece && !isKing;
+                            }
+                            // 2) 이미 내 기물을 골랐으면:
+                            //    상대 기물만 선택 가능, 왕은 불가
+                            else {
+                                isSelectable = isEnemyPiece && !isKing;
+                            }
+
+                            if (isSelectable) {
+                                const glow = document.createElement("div");
+                                glow.className = "guardian-glow";
+                                cell.appendChild(glow);
+                            } else {
+                                cell.classList.add("guardian-dim");
                             }
                         }
 
