@@ -1069,6 +1069,9 @@
             let myOwnedAugments = [];
             let guardianMode = false;
             let guardianState = null;
+            let guardianTimerVisual = null;
+
+            const GUARDIAN_DURATION_MS = 25000;
 
             const DEBUG_AUGMENTS = [
                 {
@@ -1300,6 +1303,7 @@
 
                 guardianMode = false;
                 guardianState = null;
+                stopGuardianTimerVisual();
 
                 if (overlay) {
                     overlay.classList.remove("show");
@@ -2261,6 +2265,40 @@
                 turnBox.innerText = `턴 수 : ${turnNumber}`;
             }
 
+            function stopGuardianTimerVisual() {
+    if (guardianTimerVisual) {
+        clearInterval(guardianTimerVisual);
+        guardianTimerVisual = null;
+    }
+}
+
+function startGuardianTimerVisual() {
+    stopGuardianTimerVisual();
+
+    const timerBar = document.getElementById("guardianTimerBar");
+    if (!timerBar) return;
+    if (!guardianMode || !guardianState?.active) {
+        timerBar.style.width = "100%";
+        return;
+    }
+
+    guardianTimerVisual = setInterval(() => {
+        if (!guardianMode || !guardianState?.active) {
+            timerBar.style.width = "100%";
+            stopGuardianTimerVisual();
+            return;
+        }
+
+        const remain = Math.max(
+            0,
+            Number(guardianState.remaining_ms ?? GUARDIAN_DURATION_MS)
+        );
+
+        const ratio = remain / GUARDIAN_DURATION_MS;
+        timerBar.style.width = `${ratio * 100}%`;
+    }, 100);
+}
+
             function updateGuardianUI() {
                 const overlay = document.getElementById("guardianOverlay");
                 const statusEl = document.getElementById("guardianStatus");
@@ -2281,12 +2319,14 @@
                     overlay.classList.remove("show");
                     overlay.style.display = "none";
                     if (clockPanel) clockPanel.style.display = "";
+                    stopGuardianTimerVisual();
                     return;
                 }
 
                 overlay.style.display = "flex";
                 overlay.classList.add("show");
                 if (clockPanel) clockPanel.style.display = "none";
+                startGuardianTimerVisual();
 
                 const current = guardianState.current;
                 const currentText = current === "W" ? "백" : current === "B" ? "흑" : "?";

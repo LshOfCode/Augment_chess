@@ -12,6 +12,7 @@ from fastapi.staticfiles import StaticFiles
 from Augment_chess_main import Board
 from Augment_chess_main import Board
 from Augment_silver import SILVER_AUGMENTS
+GUARDIAN_DURATION = 25
 
 BASE_DIR = Path(__file__).resolve().parent
 STATIC_DIR = BASE_DIR / "static"
@@ -89,8 +90,15 @@ def build_state(room):
     augment_state["owned"] = room["owned"]
     data["augment"] = augment_state
 
-    data["guardian"] = room["guardian"]
+    guardian_state = dict(room["guardian"])
 
+    if guardian_state["active"] and guardian_state["start_time"] is not None:
+        remain = GUARDIAN_DURATION - (time.time() - guardian_state["start_time"])
+        guardian_state["remaining_ms"] = max(0, int(remain * 1000))
+    else:
+        guardian_state["remaining_ms"] = 0
+
+    data["guardian"] = guardian_state
     return data
 
 
@@ -224,11 +232,13 @@ async def join_room(room_id: str, data: dict = Body(...)):
 
 
 @app.get("/rooms/{room_id}/state")
-def get_state(room_id: str):
+async def get_state(room_id: str):
     if room_id not in rooms:
         raise HTTPException(status_code=404, detail="room not found")
+
     room = rooms[room_id]
     update_clock(room)
+    await resolve_guardian_timeout(room_id)
     return build_state(room)
 
 @app.post("/rooms/{room_id}/move")
@@ -366,6 +376,62 @@ async def broadcast(room_id: str, message: dict):
     for ws in dead:
         connections[room_id].remove(ws)
 
+async def resolve_guardian_timeout(room_id: str):
+    if room_id not in rooms:
+        return
+
+    room = rooms[room_id]
+    guardian = room["guardian"]
+
+    if not guardian["active"]:
+        return
+    if guardian["start_time"] is None:
+        return
+
+    elapsed = time.time() - guardian["start_time"]
+    if elapsed < GUARDIAN_DURATION:
+        return
+
+    board = room["board"]
+    color = guardian["current"]
+
+    # 시간이 끝났으면:
+    # 1) 자기 기물 안 골랐으면 그냥 턴 종료
+    # 2) 자기 기물만 골랐으면 그 자기 기물만 제거
+    if guardian["selected_self"]:
+        sx, sy = guardian["selected_self"]
+        if board.in_bounds(sx, sy):
+            board.grid[sy][sx] = None
+
+    for ex, ey in guardian["selected_enemy"]:
+        if board.in_bounds(ex, ey):
+            board.grid[ey][ex] = None
+
+    if guardian["queue"] and guardian["queue"][0] == color:
+        guardian["queue"].pop(0)
+    else:
+        guardian["queue"] = [c for c in guardian["queue"] if c != color]
+
+    guardian["selected_self"] = None
+    guardian["selected_enemy"] = []
+    guardian["score"] = 0
+    guardian["max_score"] = 0
+
+    if guardian["queue"]:
+        guardian["current"] = guardian["queue"][0]
+        guardian["start_time"] = time.time()
+    else:
+        guardian["active"] = False
+        guardian["current"] = None
+        guardian["start_time"] = None
+        room["time"]["last_update"] = time.time()
+        room["time"]["running"] = room["board"].turn
+
+    await broadcast(room_id, {
+        "type": "update",
+        "state": build_state(room)
+    })
+
 def reset_room_with_swap(room_id: str):
     old_room = rooms[room_id]
     old_players = old_room["players"]
@@ -493,6 +559,11 @@ async def guardian_select_self(room_id: str, data: dict = Body(...)):
 
     room = rooms[room_id]
     guardian = room["guardian"]
+    await resolve_guardian_timeout(room_id)
+    guardian = room["guardian"]
+
+    if not guardian["active"]:
+        return {"success": False, "state": build_state(room)}
 
     if not guardian["active"]:
         raise HTTPException(status_code=400, detail="guardian not active")
@@ -564,6 +635,11 @@ async def guardian_toggle_enemy(room_id: str, data: dict = Body(...)):
 
     room = rooms[room_id]
     guardian = room["guardian"]
+    await resolve_guardian_timeout(room_id)
+    guardian = room["guardian"]
+
+    if not guardian["active"]:
+        return {"success": False, "state": build_state(room)}
 
     if not guardian["active"]:
         raise HTTPException(status_code=400, detail="guardian not active")
@@ -643,6 +719,11 @@ async def guardian_confirm(room_id: str, data: dict = Body(...)):
 
     room = rooms[room_id]
     guardian = room["guardian"]
+    await resolve_guardian_timeout(room_id)
+    guardian = room["guardian"]
+
+    if not guardian["active"]:
+        return {"success": False, "state": build_state(room)}
 
     if not guardian["active"]:
         raise HTTPException(status_code=400, detail="guardian not active")
