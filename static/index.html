@@ -579,7 +579,8 @@
             display: none;
             justify-content: center;
             align-items: center;
-            background: rgba(0, 0, 0, 0.82);
+            background: rgba(0, 0, 0, 0.32);
+            backdrop-filter: blur(2px);
             z-index: 2000;
             pointer-events: none;
         }
@@ -797,6 +798,37 @@
 
         #augmentDebugBtn:hover {
             opacity: 1;
+        }
+
+        /* ===== guardian 레이어 순서 ===== */
+        body.guardian-active #topbar,
+        body.guardian-active #status,
+        body.guardian-active #leftAugmentColumn,
+        body.guardian-active #rightSidePanel {
+            position: relative;
+            z-index: 1500;
+        }
+
+        body.guardian-active #boardWrap {
+            z-index: 3000;
+        }
+
+        body.guardian-active #guardianOverlay {
+            z-index: 2000;
+        }
+
+        /* 가디언 패널은 보드보다 위에 띄워야 안 가려짐 */
+        body.guardian-active #guardianPanel {
+            position: fixed;
+            top: 110px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 3200;
+        }
+
+        /* 가디언 배경은 전체를 덮되 너무 안 진하게 */
+        body.guardian-active #guardianOverlay {
+            background: rgba(0, 0, 0, 0.18);
         }
 
         /* ===== 반응형 ===== */
@@ -1067,7 +1099,7 @@
             let ownedAugments = [];
             let enemyOwnedAugments = [];
             let myOwnedAugments = [];
-            
+
             /* ===== guardian state ===== */
             let guardianMode = false;
             let guardianState = null;
@@ -1307,6 +1339,7 @@
                 guardianMode = false;
                 guardianState = null;
                 stopGuardianTimerVisual();
+                document.body.classList.remove("guardian-active");
 
                 if (overlay) {
                     overlay.classList.remove("show");
@@ -2269,11 +2302,11 @@
             }
 
             function stopGuardianTimerVisual() {
-    if (guardianTimerVisual) {
-        clearInterval(guardianTimerVisual);
-        guardianTimerVisual = null;
-    }
-}
+                if (guardianTimerVisual) {
+                    clearInterval(guardianTimerVisual);
+                    guardianTimerVisual = null;
+                }
+            }
 
             function stopGuardianTimerVisual() {
                 if (guardianTimerVisual) {
@@ -2333,12 +2366,14 @@
 
                 // 🔥 증강 선택 중이면 가디언 UI 절대 띄우지 않음
                 if (currentState?.augment?.active || augmentOpen) {
+                    document.body.classList.remove("guardian-active");
                     overlay.classList.remove("show");
                     overlay.style.display = "none";
                     return;
                 }
 
                 if (!guardianMode || !guardianState) {
+                    document.body.classList.remove("guardian-active");
                     overlay.classList.remove("show");
                     overlay.style.display = "none";
                     if (clockPanel) clockPanel.style.display = "";
@@ -2346,6 +2381,7 @@
                     return;
                 }
 
+                document.body.classList.add("guardian-active");
                 overlay.style.display = "flex";
                 overlay.classList.add("show");
                 if (clockPanel) clockPanel.style.display = "none";
