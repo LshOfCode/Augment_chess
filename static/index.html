@@ -1197,6 +1197,7 @@
             /* ===== augment state ===== */
             let augmentTimerId = null;
             let augmentAutoPickId = null;
+            let augmentWaitPollId = null;
             let augmentOpen = false;
             let augmentLocked = false;
             let selectedAugmentIndex = null;
@@ -1278,6 +1279,10 @@
                 const bar = document.getElementById("augmentBar");
 
                 clearAugmentTimer();
+                if (augmentWaitPollId) {
+                    clearInterval(augmentWaitPollId);
+                    augmentWaitPollId = null;
+                }
 
                 if (augmentCloseTimeout) {
                     clearTimeout(augmentCloseTimeout);
@@ -2127,12 +2132,28 @@
                 if (isWaiting) {
                     clearAugmentTimer();
                     disableAugmentCards();
+                    if (!augmentWaitPollId) {
+                        augmentWaitPollId = setInterval(async () => {
+                            if (!augmentOpen || !roomId) return;
+                            try {
+                                const res = await fetch(`${API_BASE}/rooms/${roomId}/state`);
+                                if (!res.ok) return;
+                                const data = await res.json();
+                                renderBoardFromState(data);
+                            } catch (err) {
+                                console.error(err);
+                            }
+                        }, 1000);
+                    }
 
                     const bar = document.getElementById("augmentBar");
                     if (bar) {
                         bar.style.transition = "none";
                         bar.style.width = "100%";
                     }
+                } else if (augmentWaitPollId) {
+                    clearInterval(augmentWaitPollId);
+                    augmentWaitPollId = null;
                 }
             }
 
@@ -2320,16 +2341,16 @@
                 try {
                     const result = await submitAugmentSelection(index, autoPicked);
 
-                    if (result?.both_done) {
+                    if (result?.state) {
+                        currentState = result.state;
+                        renderBoardFromState(result.state);
+                    }
+
+                    if (result?.both_done || result?.state?.augment?.active === false) {
                         hideAugmentOverlay();
                         startClockTicker();
                     } else {
                         setAugmentWaiting(true);
-                    }
-
-                    if (result?.state) {
-                        currentState = result.state;
-                        renderBoardFromState(result.state);
                     }
                 } catch (err) {
                     console.error(err);
