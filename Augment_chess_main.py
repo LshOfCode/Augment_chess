@@ -35,6 +35,96 @@ class Board:
         self.forced_winner = None
         self.special_win_reason = None
 
+    def _effect_piece_is(self, color: str, key: str, piece: Optional[Piece]) -> bool:
+        return piece is not None and self.effects[color].get(key) is piece
+
+    def _piece_skin_code(self, piece: Piece) -> Optional[str]:
+        effects = self.effects[piece.color]
+
+        if piece.name == "B" and effects.get("bishop_awakened"):
+            return "sb"
+        if piece.name == "R" and effects.get("rook_awakened"):
+            return "sr"
+        if piece.name == "Q" and effects.get("night_queen"):
+            return "nq"
+        if self._effect_piece_is(piece.color, "weakened_bishop_piece", piece):
+            return "wb"
+        if self._effect_piece_is(piece.color, "weakened_rook_piece", piece):
+            return "wr"
+        if self._effect_piece_is(piece.color, "missile_bishop_piece", piece):
+            return "mb"
+        if self._effect_piece_is(piece.color, "colossus_piece", piece):
+            return "cp"
+        return None
+
+    def _center_squares(self):
+        return {(3, 3), (4, 3), (3, 4), (4, 4)}
+
+    def _winner_for_removed_king(self, removed_color: str) -> str:
+        return "B" if removed_color == "W" else "W"
+
+    def _explode_missile_bishop(self, x: int, y: int, owner_color: str):
+        removed_king_colors = []
+
+        for yy in range(max(0, y - 1), min(8, y + 2)):
+            for xx in range(max(0, x - 1), min(8, x + 2)):
+                piece = self.grid[yy][xx]
+                if piece is None or piece.name == "P":
+                    continue
+                if piece.name == "K":
+                    removed_king_colors.append(piece.color)
+                self.grid[yy][xx] = None
+
+        if not removed_king_colors:
+            return
+
+        if len(removed_king_colors) == 1:
+            self.forced_winner = self._winner_for_removed_king(removed_king_colors[0])
+            return
+
+        enemy = "B" if owner_color == "W" else "W"
+        if enemy in removed_king_colors:
+            self.forced_winner = owner_color
+        else:
+            self.forced_winner = enemy
+
+    def _activate_king_infection(self, x1: int, y1: int, x2: int, y2: int, piece: Piece, target: Piece):
+        if self.effects[piece.color].get("infection"):
+            self.grid[y2][x2] = Piece(target.name, piece.color)
+            self.last_move = (x1, y1, x1, y1)
+            self.halfmove_clock = 0
+            self.en_passant_target = None
+            return True
+
+        if self.effects[piece.color].get("weak_infection"):
+            self.grid[y2][x2] = Piece("P", piece.color)
+            self.last_move = (x1, y1, x1, y1)
+            self.halfmove_clock = 0
+            self.en_passant_target = None
+            return True
+
+        return False
+
+    def _check_special_win_after_move(self, moved_color: str):
+        king_pos = self.find_king(moved_color)
+        if king_pos and self.effects[moved_color].get("hill_king") and king_pos in self._center_squares():
+            self.forced_winner = moved_color
+
+    def finish_turn(self, player_color: str, apply_special_check: bool = True):
+        if apply_special_check:
+            self._check_special_win_after_move(player_color)
+
+        self.tick_countdown(player_color)
+
+        if self.forced_winner is not None:
+            self._record_position()
+            return
+
+        self.turn = "B" if self.turn == "W" else "W"
+        if self.turn == "W":
+            self.fullmove_number += 1
+        self._record_position()
+
     def setup(self):
         for i in range(8):
             self.grid[1][i] = Piece("P", "B")
@@ -74,6 +164,8 @@ class Board:
         promotion = (promotion or "Q").upper()
         if promotion not in {"Q", "R", "B", "N"}:
             promotion = "Q"
+        if piece.name == "P" and self.effects[piece.color].get("no_queen_promotion") and promotion == "Q":
+            promotion = "R"
 
         consume_pawn_slow = False
 
@@ -98,18 +190,7 @@ class Board:
             if self.effects[piece.color]["pawn_slow"] <= 0:
                 self.effects[piece.color].pop("pawn_slow", None)
 
-        # 자기 턴 종료 시 카운트다운 감소
-        self.tick_countdown(moved_color)
-
-        # 카운트다운으로 승부가 끝났으면 턴 넘기기 전에 종료
-        if self.forced_winner is not None:
-            self._record_position()
-            return {"success": True}
-
-        self.turn = "B" if self.turn == "W" else "W"
-        if self.turn == "W":
-            self.fullmove_number += 1
-        self._record_position()
+        self.finish_turn(moved_color, apply_special_check=True)
         return {"success": True}
 
     def _apply_move(self, x1: int, y1: int, x2: int, y2: int, promotion: str = "Q"):
@@ -126,6 +207,14 @@ class Board:
             and self.en_passant_target == (x2, y2)
         )
         captured_piece = target
+
+        if (
+            piece.name == "K"
+            and target is not None
+            and target.color != piece.color
+            and self._activate_king_infection(x1, y1, x2, y2, piece, target)
+        ):
+            return
 
         if is_en_passant:
             capture_y = y2 + 1 if piece.color == "W" else y2 - 1
@@ -196,11 +285,24 @@ class Board:
 
                 self.effects[owner]["reorganize"] -= 1
 
-        if piece.name == "P" and ((piece.color == "W" and y2 == 0) or (piece.color == "B" and y2 == 7)):
+        promotion_row = 0 if piece.color == "W" else 7
+        if self.effects[piece.color].get("fast_promotion"):
+            promotion_row = 2 if piece.color == "W" else 5
+
+        if piece.name == "P" and y2 == promotion_row:
             promotion = (promotion or "Q").upper()
             if promotion not in {"Q", "R", "B", "N"}:
                 promotion = "Q"
+            if self.effects[piece.color].get("no_queen_promotion") and promotion == "Q":
+                promotion = "R"
             self.grid[y2][x2] = Piece(promotion, piece.color)
+
+        if (
+            piece.name == "B"
+            and self.effects[piece.color].get("missile_bishop_piece") is piece
+            and captured_piece is not None
+        ):
+            self._explode_missile_bishop(x2, y2, piece.color)
 
         self.en_passant_target = None
         if piece.name == "P" and abs(y2 - y1) == 2:
@@ -234,24 +336,41 @@ class Board:
         if piece.name == "P":
             direction = -1 if piece.color == "W" else 1
             start_row = 6 if piece.color == "W" else 1
+            enemy = "B" if piece.color == "W" else "W"
+            immune_enemy_pawn = (
+                target is not None
+                and target.name == "P"
+                and self.effects[enemy].get("pawn_vs_pawn_piece") is target
+            )
 
             if dx == 0 and dy == direction and target is None:
                 return True
+            if dx == 0 and dy == direction and target is not None and target.color != piece.color:
+                if self.effects[piece.color].get("forward_attack"):
+                    return True
+                return False
             if self.effects[piece.color].get("pawn_retreat"):
                 if dx == 0 and dy == -direction and target is None:
                     return True
 
             if (
                 dx == 0
-                and y1 == start_row
                 and dy == 2 * direction
                 and target is None
                 and self.grid[y1 + direction][x1] is None
             ):
-                return True
+                slow_count = self.effects[piece.color].get("pawn_slow", 0)
+                if y1 == start_row and slow_count > 0:
+                    return False
+                if self.effects[piece.color].get("fast_pawn"):
+                    return True
+                if y1 == start_row:
+                    return True
 
             if adx == 1 and dy == direction:
                 if target is not None and target.color != piece.color:
+                    if immune_enemy_pawn:
+                        return False
                     return True
                 if target is None and self.en_passant_target == (x2, y2):
                     adjacent = self.grid[y1][x2]
@@ -262,14 +381,26 @@ class Board:
             return (adx, ady) in [(1, 2), (2, 1)]
 
         if piece.name == "B":
+            if self.effects[piece.color].get("bishop_awakened") and max(adx, ady) == 1:
+                return True
+            if self.effects[piece.color].get("weakened_bishop_piece") is piece:
+                return adx == ady and 0 < adx <= 2 and self._clear(x1, y1, x2, y2)
             return adx == ady and self._clear(x1, y1, x2, y2)
 
         if piece.name == "R":
+            if self.effects[piece.color].get("rook_awakened") and max(adx, ady) == 1:
+                return True
+            if self.effects[piece.color].get("weakened_rook_piece") is piece:
+                return (x1 == x2 or y1 == y2) and max(adx, ady) <= 3 and self._clear(x1, y1, x2, y2)
             return (x1 == x2 or y1 == y2) and self._clear(x1, y1, x2, y2)
 
         if piece.name == "Q":
             if self.effects[piece.color].get("sealed_queen"):
                 return False
+            if self.effects[piece.color].get("colossus_piece") is piece and self.effects[piece.color].get("colossus_wait", 0) > 0:
+                return False
+            if self.effects[piece.color].get("night_queen") and (adx, ady) in [(1, 2), (2, 1)]:
+                return True
             return (adx == ady or x1 == x2 or y1 == y2) and self._clear(x1, y1, x2, y2)
 
         if piece.name == "K":
@@ -351,7 +482,11 @@ class Board:
                 if not self.is_valid_move(x, y, xx, yy):
                     continue
 
-                if piece.name == "P" and (yy == 0 or yy == 7):
+                promotion_row = 0 if piece.color == "W" else 7
+                if self.effects[piece.color].get("fast_promotion"):
+                    promotion_row = 2 if piece.color == "W" else 5
+
+                if piece.name == "P" and yy == promotion_row:
                     legal_promotion_found = False
                     for promo in ("Q", "R", "B", "N"):
                         temp = deepcopy(self)
@@ -535,7 +670,15 @@ class Board:
         return {
             "board": [
                 [
-                    {"name": p.name, "color": p.color} if p else None
+                    (
+                        {
+                            "name": p.name,
+                            "color": p.color,
+                            **({"skin": self._piece_skin_code(p)} if self._piece_skin_code(p) else {}),
+                        }
+                        if p
+                        else None
+                    )
                     for p in row
                 ]
                 for row in self.grid
@@ -549,11 +692,17 @@ class Board:
         
     def tick_countdown(self, player):
         countdown = self.effects[player].get("countdown")
-        if countdown is None:
-            return
+        if countdown is not None:
+            countdown -= 1
+            self.effects[player]["countdown"] = countdown
 
-        countdown -= 1
-        self.effects[player]["countdown"] = countdown
+            if countdown <= 0:
+                self.forced_winner = player
 
-        if countdown <= 0:
-            self.forced_winner = player
+        colossus_wait = self.effects[player].get("colossus_wait")
+        if colossus_wait is not None:
+            colossus_wait -= 1
+            if colossus_wait <= 0:
+                self.effects[player].pop("colossus_wait", None)
+            else:
+                self.effects[player]["colossus_wait"] = colossus_wait

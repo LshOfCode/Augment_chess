@@ -12,9 +12,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from Augment_chess_main import Board
-from Augment_silver import SILVER_AUGMENTS
-from Augment_gold import GOLD_AUGMENTS
-from Augment_diamond import DIAMOND_AUGMENTS
+from augment_catalog import SILVER_AUGMENTS, GOLD_AUGMENTS, DIAMOND_AUGMENTS
 
 ALL_AUGMENTS = (
     SILVER_AUGMENTS +
@@ -44,6 +42,14 @@ connections = {}
 class AugmentSelectRequest(BaseModel):
     player_id: str
     augment_id: str
+
+
+class AugmentActivateRequest(BaseModel):
+    player_id: str
+    augment_id: str
+    x: int
+    y: int
+    choice: str | None = None
 
 
 def create_room_data():
@@ -96,6 +102,7 @@ def create_room_data():
             "max_score": 0,
             "start_time": None,
         },
+        "death_marks": [],
     }
 
 
@@ -118,6 +125,7 @@ def build_state(room):
         guardian_state["remaining_ms"] = 0
 
     data["guardian"] = guardian_state
+    data["death_marks"] = serialize_death_marks(room)
     return data
 
 
@@ -162,6 +170,46 @@ def find_augment_by_id(augment_id: str):
     return None
 
 
+def find_owned_augment(room, color, augment_id: str):
+    for augment in room["owned"][color]:
+        if augment.get("id") == augment_id:
+            return augment
+    return None
+
+
+def advance_room_after_turn(room, room_id: str, player_color: str):
+    board = room["board"]
+    room["move_count"] += 1
+
+    if room["move_count"] % 2 == 0:
+        tick_death_marks(room)
+
+    increment = board.effects[player_color].get("increment", 0)
+    if increment > 0:
+        room["time"][player_color] += increment
+
+    if room["move_count"] in (20, 40):
+        room["time"]["running"] = None
+        room["time"]["last_update"] = time.time()
+
+        room["augment"]["active"] = True
+        room["augment"]["selected"]["W"] = None
+        room["augment"]["selected"]["B"] = None
+
+        phase = str(room["move_count"])
+        tier_index = room["augment"]["current_index"]
+        tier = room["augment"]["plan"][tier_index]
+        room["augment"]["tier"] = tier
+        room["augment"]["current_index"] += 1
+
+        w_choices, b_choices = get_random_augment_choices_for_both_players(tier, phase, room["owned"], 3)
+        room["augment"]["choices"]["W"] = w_choices
+        room["augment"]["choices"]["B"] = b_choices
+    else:
+        room["time"]["running"] = board.turn
+        room["time"]["last_update"] = time.time()
+
+
 def piece_value(name: str) -> int:
     if name == "P":
         return 1
@@ -173,6 +221,97 @@ def piece_value(name: str) -> int:
         return 9
     return 0
 
+
+
+
+def find_piece_position_by_ref(board, piece_ref):
+    for y in range(8):
+        for x in range(8):
+            if board.grid[y][x] is piece_ref:
+                return (x, y)
+    return None
+
+
+def get_death_mark_candidates(board, target_color):
+    candidates = []
+    for y in range(8):
+        for x in range(8):
+            piece = board.grid[y][x]
+            if piece is None:
+                continue
+            if piece.color != target_color:
+                continue
+            if piece.name in ("K", "Q", "P"):
+                continue
+            candidates.append(piece)
+    return candidates
+
+
+def apply_death_mark_to_enemy(room, player_color):
+    board = room["board"]
+    enemy_color = "B" if player_color == "W" else "W"
+    candidates = get_death_mark_candidates(board, enemy_color)
+
+    if not candidates:
+        return False
+
+    target_piece = random.choice(candidates)
+    room["death_marks"].append({
+        "piece": target_piece,
+        "remaining_turns": 3,
+        "source": player_color,
+    })
+    return True
+
+
+def tick_death_marks(room):
+    board = room["board"]
+    next_marks = []
+
+    for mark in room.get("death_marks", []):
+        piece_ref = mark.get("piece")
+        if piece_ref is None:
+            continue
+
+        pos = find_piece_position_by_ref(board, piece_ref)
+        if pos is None:
+            continue
+
+        remaining = int(mark.get("remaining_turns", 0)) - 1
+        if remaining <= 0:
+            x, y = pos
+            board.grid[y][x] = None
+            continue
+
+        mark["remaining_turns"] = remaining
+        next_marks.append(mark)
+
+    room["death_marks"] = next_marks
+
+
+def serialize_death_marks(room):
+    board = room["board"]
+    result = []
+
+    for mark in room.get("death_marks", []):
+        piece_ref = mark.get("piece")
+        if piece_ref is None:
+            continue
+
+        pos = find_piece_position_by_ref(board, piece_ref)
+        if pos is None:
+            continue
+
+        x, y = pos
+        result.append({
+            "x": x,
+            "y": y,
+            "remaining_turns": int(mark.get("remaining_turns", 0)),
+            "color": getattr(piece_ref, "color", None),
+            "piece": getattr(piece_ref, "name", None),
+        })
+
+    return result
 
 def guardian_selection_causes_illegal_check(board, color, self_pos, enemy_positions):
     removed = []
@@ -214,6 +353,8 @@ def serialize_augment(augment):
         "title": augment["name"],
         "description": augment["desc"],
         "icon": augment.get("icon", ""),
+        "activatable": bool(augment.get("activatable")),
+        "used": False,
     }
     
 def get_augments_by_tier(tier: str):
@@ -226,8 +367,9 @@ def get_augments_by_tier(tier: str):
     return []
 
 
-def get_random_augments_by_tier(tier: str, phase: str, count: int = 3):
+def get_random_augments_by_tier(tier: str, phase: str, count: int = 3, exclude_ids=None):
     pool = get_augments_by_tier(tier)
+    exclude_ids = exclude_ids or set()
 
     candidates = []
     for augment in pool:
@@ -236,7 +378,7 @@ def get_random_augments_by_tier(tier: str, phase: str, count: int = 3):
         if isinstance(timing, str):
             timing = [timing]
 
-        if phase in timing:
+        if phase in timing and augment["id"] not in exclude_ids:
             candidates.append(augment)
 
     if len(candidates) <= count:
@@ -245,8 +387,10 @@ def get_random_augments_by_tier(tier: str, phase: str, count: int = 3):
     picked = random.sample(candidates, count)
     return [serialize_augment(a) for a in picked]
 
-def get_random_augment_choices_for_both_players(tier: str, phase: str, count: int = 3):
-    w_choices = get_random_augments_by_tier(tier, phase, count)
+def get_random_augment_choices_for_both_players(tier: str, phase: str, owned, count: int = 3):
+    owned_w = {aug["id"] for aug in owned["W"]}
+    owned_b = {aug["id"] for aug in owned["B"]}
+    w_choices = get_random_augments_by_tier(tier, phase, count, owned_w)
 
     banned_ids_for_b = set()
 
@@ -266,7 +410,7 @@ def get_random_augment_choices_for_both_players(tier: str, phase: str, count: in
         if phase not in timing:
             continue
 
-        if augment["id"] in banned_ids_for_b:
+        if augment["id"] in banned_ids_for_b or augment["id"] in owned_b:
             continue
 
         candidates.append(augment)
@@ -331,7 +475,7 @@ async def join_room(room_id: str, data: dict = Body(...)):
         room["augment"]["tier"] = tier
         room["augment"]["current_index"] += 1
 
-        w_choices, b_choices = get_random_augment_choices_for_both_players(tier, "start", 3)
+        w_choices, b_choices = get_random_augment_choices_for_both_players(tier, "start", rooms[room_id]["owned"], 3)
         room["augment"]["choices"]["W"] = w_choices
         room["augment"]["choices"]["B"] = b_choices
 
@@ -416,42 +560,76 @@ async def move(room_id: str, data: dict = Body(...)):
 
     result = board.move_piece_web(x1, y1, x2, y2, promotion)
     if result["success"]:
-        room["move_count"] += 1
-        
-        increment = board.effects[player_color].get("increment", 0)
-        if increment > 0:
-            room["time"][player_color] += increment
-            
-        if room["move_count"] in (2, 4):
-
-            room["time"]["running"] = None
-            room["time"]["last_update"] = time.time()
-
-            room["augment"]["active"] = True
-            room["augment"]["selected"]["W"] = None
-            room["augment"]["selected"]["B"] = None
-
-            phase = str(room["move_count"])  # "20" or "40"
-
-            tier_index = room["augment"]["current_index"]
-            tier = room["augment"]["plan"][tier_index]
-            room["augment"]["tier"] = tier
-            room["augment"]["current_index"] += 1
-
-            w_choices, b_choices = get_random_augment_choices_for_both_players(tier, phase, 3)
-            room["augment"]["choices"]["W"] = w_choices
-            room["augment"]["choices"]["B"] = b_choices
-
-        else:
-            room["time"]["running"] = board.turn
-            room["time"]["last_update"] = time.time()
-            
+        advance_room_after_turn(room, room_id, player_color)
+             
         await broadcast(room_id, {
             "type": "update",
             "state": build_state(room),
         })
 
     return {"result": result, "state": build_state(room)}
+
+
+@app.get("/rooms/{room_id}/legal_moves")
+def legal_moves(room_id: str, x: int, y: int):
+    room = rooms.get(room_id)
+    if not room:
+        raise HTTPException(status_code=404)
+
+    board = room["board"]
+    if not board.in_bounds(x, y):
+        return {"moves": []}
+
+    piece = board.grid[y][x]
+    if piece is None:
+        return {"moves": []}
+
+    return {"moves": board.get_legal_moves(x, y)}
+
+
+@app.post("/rooms/{room_id}/augment/activate")
+async def activate_augment(room_id: str, req: AugmentActivateRequest):
+    room = rooms.get(room_id)
+    if not room:
+        raise HTTPException(status_code=404)
+
+    color = get_player_color(room, req.player_id)
+    if color is None:
+        raise HTTPException(status_code=403, detail="only players can activate augment")
+
+    owned = find_owned_augment(room, color, req.augment_id)
+    if owned is None:
+        raise HTTPException(status_code=404, detail="augment not owned")
+    if owned.get("used"):
+        raise HTTPException(status_code=400, detail="augment already used")
+
+    board = room["board"]
+    if not board.in_bounds(req.x, req.y):
+        raise HTTPException(status_code=400, detail="invalid target")
+
+    if req.augment_id == "pawn_evolution":
+        piece = board.grid[req.y][req.x]
+        if piece is None or piece.color != color or piece.name != "P":
+            raise HTTPException(status_code=400, detail="target must be your pawn")
+        if board.turn != color:
+            raise HTTPException(status_code=400, detail="not your turn")
+
+        choice = (req.choice or "N").upper()
+        if choice not in {"N", "B"}:
+            raise HTTPException(status_code=400, detail="choice must be N or B")
+
+        board.grid[req.y][req.x] = board.create_piece(choice, color)
+        owned["used"] = True
+        board.finish_turn(color, apply_special_check=False)
+        advance_room_after_turn(room, room_id, color)
+    else:
+        raise HTTPException(status_code=400, detail="augment is not activatable")
+
+    await broadcast(room_id, {
+        "type": "update",
+        "state": build_state(room),
+    })
+    return {"success": True, "state": build_state(room)}
 
 
 @app.post("/rooms/{room_id}/reset")
@@ -626,6 +804,11 @@ async def select_augment(room_id: str, req: AugmentSelectRequest):
     if room["augment"]["selected"][color] is not None:
         raise HTTPException(status_code=400)
 
+    if req.augment_id == "death_mark":
+        enemy = "B" if color == "W" else "W"
+        if not get_death_mark_candidates(room["board"], enemy):
+            raise HTTPException(status_code=400, detail="death_mark has no valid target")
+
     room["augment"]["selected"][color] = req.augment_id
     picked_augment = find_augment_by_id(req.augment_id)
     if picked_augment is not None:
@@ -677,6 +860,12 @@ async def select_augment(room_id: str, req: AugmentSelectRequest):
                 augment = find_augment_by_id(augment_id)
                 if augment is not None:
                     augment["apply"](board, apply_color)
+
+            elif augment_id == "death_mark":
+                if apply_death_mark_to_enemy(room, apply_color):
+                    augment = find_augment_by_id(augment_id)
+                    if augment is not None:
+                        augment["apply"](board, apply_color)
 
             else:
                 augment = find_augment_by_id(augment_id)
