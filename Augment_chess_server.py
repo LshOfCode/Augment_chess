@@ -746,6 +746,16 @@ def reset_room_with_swap(room_id: str):
     if new_room["players"]["W"] is not None and new_room["players"]["B"] is not None:
         new_room["time"]["last_update"] = time.time()
         new_room["time"]["running"] = None
+        new_room["augment"]["active"] = True
+
+        tier_index = new_room["augment"]["current_index"]
+        tier = new_room["augment"]["plan"][tier_index]
+        new_room["augment"]["tier"] = tier
+        new_room["augment"]["current_index"] += 1
+
+        w_choices, b_choices = get_random_augment_choices_for_both_players(tier, "start", new_room["owned"], 3)
+        new_room["augment"]["choices"]["W"] = w_choices
+        new_room["augment"]["choices"]["B"] = b_choices
 
     rooms[room_id] = new_room
 

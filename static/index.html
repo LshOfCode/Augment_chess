@@ -1651,6 +1651,12 @@
             function renderBoardFromState(data) {
                 currentState = data;
                 currentBoard = data.board;
+                if (data.players && playerId) {
+                    if (data.players.W === playerId) myColor = "W";
+                    else if (data.players.B === playerId) myColor = "B";
+                    else myColor = "S";
+                    updateColorBox();
+                }
                 if (selected) {
                     const selectedPiece = currentBoard?.[selected.y]?.[selected.x];
                     if (!selectedPiece || selectedPiece.color !== myColor) {
