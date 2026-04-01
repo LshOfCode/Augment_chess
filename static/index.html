@@ -1515,6 +1515,8 @@
                     endedNow = true;
                     if (gameState.special_win === "countdown") {
                         text = data.winner === "W" ? "백 승리 - 종말의 카운트다운" : "흑 승리 - 종말의 카운트다운";
+                    } else if (gameState.special_win === "hill_king") {
+                        text = data.winner === "W" ? "백 승리 - 언덕의 왕" : "흑 승리 - 언덕의 왕";
                     } else {
                         text = data.winner === "W" ? "백 승리" : "흑 승리";
                     }

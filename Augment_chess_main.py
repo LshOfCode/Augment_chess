@@ -80,6 +80,7 @@ class Board:
 
         if len(removed_king_colors) == 1:
             self.forced_winner = self._winner_for_removed_king(removed_king_colors[0])
+            self.special_win_reason = "bishop_missile"
             return
 
         enemy = "B" if owner_color == "W" else "W"
@@ -87,6 +88,7 @@ class Board:
             self.forced_winner = owner_color
         else:
             self.forced_winner = enemy
+        self.special_win_reason = "bishop_missile"
 
     def _activate_king_infection(self, x1: int, y1: int, x2: int, y2: int, piece: Piece, target: Piece):
         if self.effects[piece.color].get("infection"):
@@ -109,6 +111,7 @@ class Board:
         king_pos = self.find_king(moved_color)
         if king_pos and self.effects[moved_color].get("hill_king") and king_pos in self._center_squares():
             self.forced_winner = moved_color
+            self.special_win_reason = "hill_king"
 
     def finish_turn(self, player_color: str, apply_special_check: bool = True):
         if apply_special_check:
@@ -591,7 +594,7 @@ class Board:
                 "draw": False,
                 "draw_reason": None,
                 "winner": self.forced_winner,
-                "special_win": "countdown",
+                "special_win": self.special_win_reason,
             }
         check = self.is_in_check(self.turn)
         moves_exist = self._has_any_legal_move(self.turn)
@@ -705,6 +708,7 @@ class Board:
 
             if countdown <= 0:
                 self.forced_winner = player
+                self.special_win_reason = "countdown"
 
         colossus_wait = self.effects[player].get("colossus_wait")
         if colossus_wait is not None:
