@@ -229,7 +229,7 @@ SILVER_AUGMENTS = [
 
 GOLD_AUGMENTS = [
     {"id": "blitz_game", "name": "블리츠 게임", "desc": "상대 시간 7분 제거, 상대는 자신의 턴마다 10초 증가합니다.", "tier": "gold", "timing": ["start"], "icon": "static/Augment_icon/Augment_blitz_game.png", "apply": apply_blitz_game},
-    {"id": "gambit_brain", "name": "약한 내기", "desc": "내 폰 최대 2개 제거, 상대 마이너 피스 1개 제거.", "tier": "gold", "timing": ["start", "20", "40"], "icon": "static/Augment_icon/Augment_gambit_brain.png", "apply": apply_gambit_brain},
+    {"id": "gambit_brain", "name": "갬빗 두뇌", "desc": "내 폰 최대 2개 제거, 상대 마이너 피스 1개 제거.", "tier": "gold", "timing": ["start", "20", "40"], "icon": "static/Augment_icon/Augment_gambit_brain.png", "apply": apply_gambit_brain},
     {"id": "underpromotion_lock", "name": "언더 프로모션!!", "desc": "상대는 퀸으로 프로모션할 수 없습니다.", "tier": "gold", "timing": ["start", "20", "40"], "icon": "static/Augment_icon/Augment_sealed_queen.png", "apply": apply_underpromotion_enemy},
     {"id": "death_mark", "name": "죽음의 표시", "desc": "상대의 킹, 퀸, 폰을 제외한 랜덤 기물 1개를 표시하고 3턴 뒤 제거합니다.", "tier": "gold", "timing": ["20", "40"], "icon": "static/Augment_icon/Augment_death_mark.png", "apply": apply_death_mark},
     {"id": "fast_promotion", "name": "빠른 승급", "desc": "내 폰의 프로모션 칸이 2칸 앞당겨집니다.", "tier": "gold", "timing": ["start", "20", "40"], "icon": "static/Augment_icon/Augment_fast_promotion.png", "apply": apply_fast_promotion},
