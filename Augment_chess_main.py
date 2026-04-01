@@ -327,6 +327,13 @@ class Board:
             return False
         if target and target.color == piece.color:
             return False
+        if (
+            target
+            and target.color != piece.color
+            and self.effects[target.color].get("colossus_piece") is target
+            and self.effects[target.color].get("colossus_wait", 0) > 0
+        ):
+            return False
 
         dx = x2 - x1
         dy = y2 - y1

@@ -237,7 +237,6 @@ GOLD_AUGMENTS = [
     {"id": "bishop_weaken", "name": "비숍 약화", "desc": "상대 무작위 비숍 1개의 이동 거리를 최대 2칸으로 제한합니다.", "tier": "gold", "timing": ["start", "20", "40"], "icon": "", "apply": apply_weaken_enemy_bishop},
     {"id": "rook_weaken", "name": "룩 약화", "desc": "상대 무작위 룩 1개의 이동 거리를 최대 3칸으로 제한합니다.", "tier": "gold", "timing": ["start", "20", "40"], "icon": "", "apply": apply_weaken_enemy_rook},
     {"id": "bishop_awakening", "name": "비숍 각성", "desc": "내 비숍은 추가로 주변 1칸을 킹처럼 이동할 수 있습니다.", "tier": "gold", "timing": ["start", "20", "40"], "icon": "", "apply": apply_bishop_awakening},
-    {"id": "forward_attack", "name": "전진 공격", "desc": "내 폰은 정면으로도 공격할 수 있습니다.", "tier": "gold", "timing": ["start"], "icon": "", "apply": apply_forward_attack},
     {"id": "rook_awakening", "name": "룩 각성", "desc": "내 룩은 추가로 주변 1칸을 킹처럼 이동할 수 있습니다.", "tier": "gold", "timing": ["start", "20", "40"], "icon": "", "apply": apply_rook_awakening},
     {"id": "infection", "name": "감염", "desc": "킹이 기물을 잡을 때 그 기물을 같은 팀 기물로 바꾸고 킹은 이동하지 않습니다.", "tier": "gold", "timing": ["start"], "icon": "", "apply": apply_infection},
     {"id": "pawn_evolution", "name": "폰 진화", "desc": "한 턴을 소모해 폰 1개를 나이트 또는 비숍으로 진화시킵니다.", "tier": "gold", "timing": ["start", "20", "40"], "icon": "", "apply": apply_pawn_evolution, "activatable": True},
@@ -248,7 +247,8 @@ DIAMOND_AUGMENTS = [
     {"id": "bullet_game", "name": "불릿 게임", "desc": "상대 시간 9분 제거, 상대는 자신의 턴마다 5초 증가합니다.", "tier": "diamond", "timing": ["start"], "icon": "static/Augment_icon/Augment_bullet_game.png", "apply": apply_bullet_game},
     {"id": "thanos", "name": "타노스", "desc": "내 폰과 양쪽 킹을 제외한 모든 기물을 25% 확률로 제거합니다.", "tier": "diamond", "timing": ["start", "20", "40"], "icon": "static/Augment_icon/Augment_thanos.png", "apply": apply_thanos},
     {"id": "fast_pawn", "name": "fast 폰", "desc": "내 폰은 항상 2칸 전진할 수 있으며, 상대는 앙파상을 할 수 있습니다.", "tier": "diamond", "timing": ["start"], "icon": "", "apply": apply_fast_pawn},
+    {"id": "forward_attack", "name": "전진 공격", "desc": "내 폰은 정면으로도 공격할 수 있습니다.", "tier": "diamond", "timing": ["start"], "icon": "", "apply": apply_forward_attack},
     {"id": "night_queen", "name": "밤의 여왕", "desc": "내 모든 퀸은 나이트 이동을 추가로 가집니다.", "tier": "diamond", "timing": ["start", "20", "40"], "icon": "", "apply": apply_night_queen},
     {"id": "bishop_missile", "name": "비숍 탄도 미사일", "desc": "내 무작위 비숍 1개는 포획 시 3x3 범위의 폰이 아닌 기물이 제거 됩니다. 이때 비숍도 함께 제거 됩니다.", "tier": "diamond", "timing": ["start"], "icon": "", "apply": apply_bishop_missile},
-    {"id": "checkmate_colossus", "name": "체크메이트의 거신병", "desc": "폰을 모두 잃습니다. 즉시 퀸 앞에 퀸처럼 이동하는 거신병을 소환합니다. 5턴 후 부터 사용할 수 있습니다.", "tier": "diamond", "timing": ["start", "20", "40"], "icon": "", "apply": apply_checkmate_colossus},
+    {"id": "checkmate_colossus", "name": "체크메이트의 거신병", "desc": "폰을 모두 잃습니다. 즉시 퀸 앞에 퀸처럼 이동하는 거신병을 소환합니다. 5턴 동안 움직일 수 없고, 그동안 잡히지 않습니다.", "tier": "diamond", "timing": ["start", "20", "40"], "icon": "", "apply": apply_checkmate_colossus},
 ]

@@ -1003,18 +1003,6 @@
             margin-top: 2px;
         }
 
-        #augmentDebugBtn {
-            position: fixed;
-            right: 14px;
-            bottom: 14px;
-            z-index: 30;
-            opacity: 0.6;
-        }
-
-        #augmentDebugBtn:hover {
-            opacity: 1;
-        }
-
         /* ===== guardian 레이어 순서 ===== */
         body.guardian-active #topbar,
         body.guardian-active #status,
@@ -1176,10 +1164,6 @@
                 <button id="guardianConfirmBtn" onclick="confirmGuardian()" disabled>확인</button>
             </div>
         </div>
-
-
-        <button id="augmentDebugBtn" onclick="openDebugAugment()">증강 테스트</button>
-
         <script>
             const API_BASE = "";
 
@@ -1193,6 +1177,7 @@
             let gameEnded = false;
             let socket = null;
             let clockTicker = null;
+            let statePoller = null;
 
             /* ===== augment state ===== */
             let augmentTimerId = null;
@@ -1466,6 +1451,21 @@
                 }
             }
 
+            function startStatePolling() {
+                if (statePoller) clearInterval(statePoller);
+                statePoller = setInterval(() => {
+                    if (!roomId) return;
+                    loadBoard();
+                }, 1000);
+            }
+
+            function stopStatePolling() {
+                if (statePoller) {
+                    clearInterval(statePoller);
+                    statePoller = null;
+                }
+            }
+
             function showGameOverModal(text) {
                 document.getElementById("modalTitle").innerText = text;
                 document.getElementById("gameOverModal").classList.add("show");
@@ -1572,6 +1572,7 @@
                 await joinCurrentRoom();
                 await loadBoard();
                 connectSocket();
+                startStatePolling();
             }
 
             async function joinRoom() {
@@ -1591,6 +1592,7 @@
                 await joinCurrentRoom();
                 await loadBoard();
                 connectSocket();
+                startStatePolling();
             }
 
             async function joinCurrentRoom() {
@@ -2041,6 +2043,7 @@
             }
 
             function leaveRoom() {
+                stopStatePolling();
                 roomId = null;
                 myColor = null;
                 currentBoard = null;
@@ -2479,31 +2482,6 @@
                 }
             }
 
-            function openDebugAugment() {
-                showAugmentOverlay({
-                    tier: "gold",
-                    myTurn: true,
-                    options: [
-                        {
-                            tier: "gold",
-                            title: "캐슬링 금지",
-                            description: "상대는 이번 게임에서 캐슬링을 할 수 없습니다."
-                        },
-                        {
-                            tier: "gold",
-                            title: "언더 프로모션!!",
-                            description: "상대는 퀸으로 프로모션 할 수 없습니다."
-                        },
-                        {
-                            tier: "gold",
-                            title: "모든 폰 둔화",
-                            description: "상대의 폰은 시작할 때 2칸 전진할 수 없습니다."
-                        }
-                    ],
-                    durationMs: 25000
-                });
-            }
-
             /* ===== init ===== */
             document.addEventListener("dragstart", (e) => {
                 if (e.target.tagName === "IMG") {
@@ -2542,6 +2520,7 @@
                 joinCurrentRoom().then(() => {
                     loadBoard();
                     connectSocket();
+                    startStatePolling();
                 });
             }
 
