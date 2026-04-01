@@ -41,6 +41,18 @@ class Board:
     def _piece_skin_code(self, piece: Piece) -> Optional[str]:
         effects = self.effects[piece.color]
 
+        if (
+            piece.name == "B"
+            and effects.get("bishop_awakened")
+            and self._effect_piece_is(piece.color, "weakened_bishop_piece", piece)
+        ):
+            return "swb"
+        if (
+            piece.name == "R"
+            and effects.get("rook_awakened")
+            and self._effect_piece_is(piece.color, "weakened_rook_piece", piece)
+        ):
+            return "swr"
         if piece.name == "B" and effects.get("bishop_awakened"):
             return "sb"
         if piece.name == "R" and effects.get("rook_awakened"):
