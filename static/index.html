@@ -436,6 +436,26 @@
             position: absolute;
         }
 
+        .last-move-origin {
+            width: 68px;
+            height: 68px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255, 218, 84, 0.58) 0%, rgba(255, 214, 64, 0.34) 34%, rgba(255, 208, 54, 0.14) 62%, rgba(255, 206, 40, 0.03) 82%, rgba(255, 206, 40, 0) 100%);
+            filter: blur(2px);
+            position: absolute;
+            z-index: 1;
+        }
+
+        .last-move-dest {
+            width: 58px;
+            height: 58px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.82) 0%, rgba(255, 255, 255, 0.34) 34%, rgba(255, 255, 255, 0.08) 62%, rgba(255, 255, 255, 0) 100%);
+            filter: blur(3px);
+            position: absolute;
+            z-index: 1;
+        }
+
         .check-king {
             width: 58px;
             height: 58px;
@@ -519,6 +539,56 @@
             filter: grayscale(0.25);
         }
 
+        /* DEBUG AUGMENT PANEL START */
+        #debugAugmentPanel {
+            display: none;
+            margin-top: 14px;
+            margin-left: auto;
+            margin-right: -10px;
+            width: 220px;
+            padding: 12px;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.95);
+            color: #111;
+            box-sizing: border-box;
+        }
+
+        #debugAugmentPanel.show {
+            display: block;
+        }
+
+        .debug-augment-title {
+            font-size: 15px;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .debug-augment-row {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-bottom: 10px;
+        }
+
+        .debug-augment-row label {
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .debug-augment-row select {
+            width: 100%;
+            box-sizing: border-box;
+            border: 1px solid #bbb;
+        }
+
+        #debugGrantBtn {
+            width: 100%;
+            background: #1d7c42;
+            color: #fff;
+            cursor: pointer;
+        }
+        /* DEBUG AUGMENT PANEL END */
+
         .clock-box {
             font-size: 18px;
             font-weight: bold;
@@ -585,12 +655,45 @@
             display: flex;
         }
 
+        #augmentOverlay.board-preview {
+            background: transparent;
+            backdrop-filter: none;
+        }
+
         #augmentPanel {
             position: relative;
             width: 100vw;
             height: 100vh;
             pointer-events: auto;
             z-index: 10000;
+        }
+
+        #augmentBackBtn {
+            position: absolute;
+            top: 18px;
+            right: 18px;
+            width: 48px;
+            height: 48px;
+            border: 0;
+            border-radius: 14px;
+            background: rgba(28, 28, 28, 0.92);
+            color: #f5f5f5;
+            font-size: 28px;
+            line-height: 1;
+            cursor: pointer;
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.28);
+            z-index: 5;
+        }
+
+        #augmentBackBtn:hover {
+            background: rgba(18, 18, 18, 0.96);
+        }
+
+        #augmentOverlay.board-preview #augmentStatus,
+        #augmentOverlay.board-preview #augmentTimer,
+        #augmentOverlay.board-preview #augmentCards {
+            opacity: 0;
+            pointer-events: none;
         }
 
         #augmentStatus {
@@ -1142,10 +1245,28 @@
                 <div id="bottomClock" class="clock-box">백 10:00</div>
             </div>
             <button id="augmentActivateBtn" onclick="confirmActivatableAugment()" disabled>✓</button>
+            <!-- DEBUG AUGMENT PANEL START -->
+            <div id="debugAugmentPanel">
+                <div class="debug-augment-title">증강 지급</div>
+                <div class="debug-augment-row">
+                    <label for="debugTargetColor">대상</label>
+                    <select id="debugTargetColor">
+                        <option value="W">백</option>
+                        <option value="B">흑</option>
+                    </select>
+                </div>
+                <div class="debug-augment-row">
+                    <label for="debugAugmentSelect">증강</label>
+                    <select id="debugAugmentSelect"></select>
+                </div>
+                <button id="debugGrantBtn" onclick="debugGrantAugment()">즉시 지급</button>
+            </div>
+            <!-- DEBUG AUGMENT PANEL END -->
         </div>
 
         <div id="augmentOverlay">
             <div id="augmentPanel">
+                <button id="augmentBackBtn" onclick="toggleAugmentBoardPreview()" title="보드 보기">↶</button>
                 <div id="augmentStatus">증강을 선택하세요</div>
 
                 <div id="augmentTimer">
@@ -1178,6 +1299,8 @@
             let socket = null;
             let clockTicker = null;
             let statePoller = null;
+            const debugEnabled = new URLSearchParams(window.location.search).get("debug") === "1";
+            let debugAugmentCatalog = [];
 
             /* ===== augment state ===== */
             let augmentTimerId = null;
@@ -1188,11 +1311,14 @@
             let selectedAugmentIndex = null;
             let augmentShownThisGame = false;
             let augmentCloseTimeout = null;
+            let augmentBoardPreview = false;
             let ownedAugments = [];
             let enemyOwnedAugments = [];
             let myOwnedAugments = [];
             let armedAugmentId = null;
             let augmentTarget = null;
+            let augmentSecondTarget = null;
+            let augmentTargetMoves = [];
 
             /* ===== guardian state ===== */
             let guardianMode = false;
@@ -1230,6 +1356,8 @@
             function clearAugmentActivationState() {
                 armedAugmentId = null;
                 augmentTarget = null;
+                augmentSecondTarget = null;
+                augmentTargetMoves = [];
             }
 
             function updateActivatableAugmentUI() {
@@ -1242,8 +1370,52 @@
                     return;
                 }
 
+                if (armedAugmentId === "ambush_setup") {
+                    btn.style.display = "none";
+                    btn.disabled = true;
+                    return;
+                }
+
                 btn.style.display = "block";
-                btn.disabled = !augmentTarget;
+                if (armedAugmentId === "emergency_escape" || armedAugmentId === "ambush_setup") btn.disabled = !(augmentTarget && augmentSecondTarget);
+                else btn.disabled = !augmentTarget;
+            }
+
+            function getOwnedAugmentById(id) {
+                return (myOwnedAugments || []).find(aug => aug.id === id && !aug.used) || null;
+            }
+
+            function getKingBreedingQueens(x, y) {
+                const result = [];
+                if (!currentBoard || !myColor) return result;
+                if (!getOwnedAugmentById("king_breeding")) return result;
+                const kingPiece = currentBoard?.[y]?.[x];
+                if (!kingPiece || kingPiece.color !== myColor || kingPiece.name !== "K") return result;
+                for (let dy = -1; dy <= 1; dy++) {
+                    for (let dx = -1; dx <= 1; dx++) {
+                        if (dx === 0 && dy === 0) continue;
+                        const qx = x + dx;
+                        const qy = y + dy;
+                        const piece = currentBoard?.[qy]?.[qx];
+                        if (piece && piece.color === myColor && piece.name === "Q") {
+                            result.push([qx, qy]);
+                        }
+                    }
+                }
+                return result;
+            }
+
+            async function loadAugmentTargetMoves(x, y) {
+                augmentTargetMoves = [];
+                if (!roomId) return;
+                try {
+                    const res = await fetch(`${API_BASE}/rooms/${roomId}/legal_moves?x=${x}&y=${y}`);
+                    if (!res.ok) return;
+                    const data = await res.json();
+                    augmentTargetMoves = Array.isArray(data.moves) ? data.moves : [];
+                } catch (err) {
+                    console.error(err);
+                }
             }
 
             function armActivatableAugment(aug) {
@@ -1251,11 +1423,28 @@
 
                 armedAugmentId = armedAugmentId === aug.id ? null : aug.id;
                 augmentTarget = null;
+                augmentSecondTarget = null;
+                augmentTargetMoves = [];
                 selected = null;
                 selectedLegalMoves = [];
                 updateActivatableAugmentUI();
                 renderOwnedAugments();
                 renderBoardFromState(currentState);
+            }
+
+            function updateAugmentOverlayMode() {
+                const overlay = document.getElementById("augmentOverlay");
+                const button = document.getElementById("augmentBackBtn");
+                if (!overlay || !button) return;
+
+                overlay.classList.toggle("board-preview", augmentBoardPreview);
+                button.title = augmentBoardPreview ? "증강 선택으로 돌아가기" : "보드 보기";
+            }
+
+            function toggleAugmentBoardPreview() {
+                if (!augmentOpen) return;
+                augmentBoardPreview = !augmentBoardPreview;
+                updateAugmentOverlayMode();
             }
 
             function hideAugmentOverlay() {
@@ -1291,6 +1480,8 @@
                 augmentOpen = false;
                 augmentLocked = false;
                 selectedAugmentIndex = null;
+                augmentBoardPreview = false;
+                updateAugmentOverlayMode();
 
                 const statusEl = document.getElementById("augmentStatus");
                 if (statusEl) statusEl.innerText = "증강을 선택하세요";
@@ -1340,7 +1531,8 @@
                             tier: data.tier,
                             myTurn: data.player_color === myColor,
                             options: data.options,
-                            durationMs: data.duration_ms ?? 25000
+                            durationMs: data.duration_ms ?? 25000,
+                            remainingMs: data.remaining_ms ?? data.duration_ms ?? 25000
                         });
                     }
 
@@ -1361,9 +1553,13 @@
             }
 
             function ensurePlayerId() {
-                let saved = sessionStorage.getItem("augment_chess_player_id");
+                let saved = localStorage.getItem("augment_chess_player_id") || sessionStorage.getItem("augment_chess_player_id");
                 if (!saved) {
                     saved = crypto.randomUUID();
+                    localStorage.setItem("augment_chess_player_id", saved);
+                    sessionStorage.setItem("augment_chess_player_id", saved);
+                } else {
+                    localStorage.setItem("augment_chess_player_id", saved);
                     sessionStorage.setItem("augment_chess_player_id", saved);
                 }
                 playerId = saved;
@@ -1515,6 +1711,8 @@
                     endedNow = true;
                     if (gameState.special_win === "countdown") {
                         text = data.winner === "W" ? "백 승리 - 종말의 카운트다운" : "흑 승리 - 종말의 카운트다운";
+                    } else if (gameState.special_win === "no_draw_win") {
+                        text = data.winner === "W" ? "백 승리 - 무승부하지 않을래?" : "흑 승리 - 무승부하지 않을래?";
                     } else if (gameState.special_win === "hill_king") {
                         text = data.winner === "W" ? "백 승리 - 언덕의 왕" : "흑 승리 - 언덕의 왕";
                     } else {
@@ -1531,6 +1729,10 @@
                     text = data.turn === "W" ? "백 체크" : "흑 체크";
                 } else {
                     text = data.turn === "W" ? "백 턴" : "흑 턴";
+                }
+
+                if (!endedNow && armedAugmentId === "ambush_setup" && data.move_count === 0) {
+                    text = augmentTarget ? "이동할 위치를 선택하세요" : "이동할 기물을 선택하세요";
                 }
 
                 gameEnded = endedNow;
@@ -1603,7 +1805,7 @@
                 const res = await fetch(`${API_BASE}/rooms/${roomId}/join`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ player_id: playerId })
+                    body: JSON.stringify({ player_id: playerId, debug: debugEnabled })
                 });
 
                 if (!res.ok) {
@@ -1620,11 +1822,25 @@
                 return guardianMode && guardianState && guardianState.current === myColor;
             }
 
-            function guardianPieceValue(name) {
-                if (name === "P") return 1;
-                if (name === "N" || name === "B") return 3;
-                if (name === "R") return 5;
-                if (name === "Q") return 9;
+            function guardianPieceValue(piece) {
+                if (!piece) return 0;
+                const skin = piece.skin || "";
+                if (skin === "sp") return 2;
+                if (skin === "wb") return 2;
+                if (skin === "wr") return 4;
+                if (skin === "sb") return 5;
+                if (skin === "swb") return 4;
+                if (skin === "sr") return 7;
+                if (skin === "swr") return 6;
+                if (skin === "tb") return 7;
+                if (skin === "wtb") return 6;
+                if (skin === "mb") return 5;
+                if (skin === "cp") return 9;
+                if (skin === "nq") return 12;
+                if (piece.name === "P") return 1;
+                if (piece.name === "N" || piece.name === "B") return 3;
+                if (piece.name === "R") return 5;
+                if (piece.name === "Q") return 9;
                 return 0;
             }
 
@@ -1640,7 +1856,7 @@
                 if (alreadySelected) return true;
 
                 const remain = Number(guardian.max_score || 0) - Number(guardian.score || 0);
-                const value = guardianPieceValue(piece.name);
+                const value = guardianPieceValue(piece);
 
                 // 남은 점수보다 비싸면 선택 불가
                 if (value > remain) return false;
@@ -1672,8 +1888,32 @@
                 }
                 if (augmentTarget) {
                     const targetPiece = currentBoard?.[augmentTarget.y]?.[augmentTarget.x];
-                    if (!targetPiece || targetPiece.color !== myColor || targetPiece.name !== "P") {
+                    if (
+                        !targetPiece ||
+                        targetPiece.color !== myColor ||
+                        (
+                            (armedAugmentId === "pawn_evolution" && targetPiece.name !== "P") ||
+                            (armedAugmentId === "king_breeding" && targetPiece.name !== "K") ||
+                            (armedAugmentId === "emergency_escape" && targetPiece.name !== "K")
+                        )
+                    ) {
                         augmentTarget = null;
+                    }
+                }
+                if (augmentSecondTarget) {
+                    const secondPiece = currentBoard?.[augmentSecondTarget.y]?.[augmentSecondTarget.x];
+                    const isKingBreedingSecond =
+                        armedAugmentId === "king_breeding" &&
+                        secondPiece &&
+                        secondPiece.color === myColor &&
+                        secondPiece.name === "Q" &&
+                        augmentTarget &&
+                        Math.max(Math.abs(augmentSecondTarget.x - augmentTarget.x), Math.abs(augmentSecondTarget.y - augmentTarget.y)) === 1;
+                    const isMoveTargetSecond =
+                        (armedAugmentId === "emergency_escape" || armedAugmentId === "ambush_setup") &&
+                        augmentTargetMoves.some(move => move[0] === augmentSecondTarget.x && move[1] === augmentSecondTarget.y);
+                    if (!isKingBreedingSecond && !isMoveTargetSecond) {
+                        augmentSecondTarget = null;
                     }
                 }
 
@@ -1699,6 +1939,13 @@
 
                     renderOwnedAugments();
                 }
+
+                const ambushSetup = myOwnedAugments.find(aug => aug.id === "ambush_setup" && aug.activatable && !aug.used);
+                if (armedAugmentId === "ambush_setup" && (!ambushSetup || data.move_count !== 0)) {
+                    clearAugmentActivationState();
+                } else if (!augmentState?.active && data.move_count === 0 && ambushSetup && !armedAugmentId && !guardianMode) {
+                    armActivatableAugment(ambushSetup);
+                }
                 updateActivatableAugmentUI();
 
                 if (
@@ -1715,7 +1962,8 @@
                         tier: augmentState.tier || "gold",
                         myTurn: augmentState.selected?.[myColor] == null,
                         options: myChoices,
-                        durationMs: 25000
+                        durationMs: augmentState.duration_ms ?? 25000,
+                        remainingMs: getAugmentRemainingMs(augmentState, 25000)
                     });
                 }
 
@@ -1732,7 +1980,9 @@
 
                 const gameState = currentState.game_state;
                 const checkedColor = gameState.check ? data.turn : null;
+                const attackedKings = gameState.attacked_kings || {};
                 const winnerColor = gameState.checkmate ? data.winner : null;
+                const lastMove = Array.isArray(data.last_move) && data.last_move.length === 4 ? data.last_move : null;
 
                 for (let displayY = 0; displayY < 8; displayY++) {
                     for (let displayX = 0; displayX < 8; displayX++) {
@@ -1745,6 +1995,20 @@
                         cell.onclick = () => handleClick(x, y);
 
                         const piece = currentBoard[y][x];
+                        const isLastMoveOrigin = lastMove && lastMove[0] === x && lastMove[1] === y;
+                        const isLastMoveDest = lastMove && lastMove[2] === x && lastMove[3] === y;
+
+                        if (isLastMoveOrigin) {
+                            const originMark = document.createElement("div");
+                            originMark.className = "last-move-origin";
+                            cell.appendChild(originMark);
+                        }
+
+                        if (isLastMoveDest) {
+                            const destMark = document.createElement("div");
+                            destMark.className = "last-move-dest";
+                            cell.appendChild(destMark);
+                        }
 
                         if (selected && selected.x === x && selected.y === y) {
                             cell.classList.add("selected");
@@ -1752,9 +2016,13 @@
                         if (augmentTarget && augmentTarget.x === x && augmentTarget.y === y) {
                             cell.classList.add("selected");
                         }
+                        if (augmentSecondTarget && augmentSecondTarget.x === x && augmentSecondTarget.y === y) {
+                            cell.classList.add("selected");
+                        }
 
                         if (piece && piece.name === "K") {
-                            if (checkedColor === piece.color) {
+                            const attackedKing = (attackedKings[piece.color] || []).some(pos => pos[0] === x && pos[1] === y);
+                            if (checkedColor === piece.color || attackedKing) {
                                 const ring = document.createElement("div");
                                 ring.className = "check-king";
                                 cell.appendChild(ring);
@@ -1767,12 +2035,19 @@
                             }
                         }
 
-                        if (selected && isPossibleMove(selected.x, selected.y, x, y)) {
-                            const selectedPiece = currentBoard[selected.y][selected.x];
+                        if (
+                            (selected && isPossibleMove(selected.x, selected.y, x, y)) ||
+                            ((armedAugmentId === "emergency_escape" || armedAugmentId === "ambush_setup") &&
+                             augmentTarget &&
+                             augmentTargetMoves.some(move => move[0] === x && move[1] === y))
+                        ) {
+                            const selectedPiece = selected ? currentBoard[selected.y][selected.x] : null;
                             const target = currentBoard[y][x];
-                            const isPawnEp = selectedPiece && selectedPiece.name === "P" && x !== selected.x && !target;
+                            const activePiece = selectedPiece || currentBoard?.[augmentTarget?.y]?.[augmentTarget?.x];
+                            const activeX = selected ? selected.x : augmentTarget?.x;
+                            const isPawnEp = activePiece && activePiece.name === "P" && x !== activeX && !target;
 
-                            if ((target && selectedPiece && target.color !== selectedPiece.color) || isPawnEp) {
+                            if ((target && activePiece && target.color !== activePiece.color) || isPawnEp) {
                                 const ring = document.createElement("div");
                                 ring.className = "capture-ring";
                                 cell.appendChild(ring);
@@ -1786,6 +2061,8 @@
                         if (guardian?.active && isMyGuardianTurn() && piece) {
                             const isMyPiece = piece.color === myColor;
                             const isKing = piece.name === "K";
+                            const selectedSelfGroup = guardian.selected_self_group || [];
+                            const isSelectedSelfGroup = selectedSelfGroup.some(pos => pos[0] === x && pos[1] === y);
 
                             let isSelectable = false;
 
@@ -1797,7 +2074,7 @@
                             // 이미 내 기물을 골랐으면:
                             // 상대 기물 중에서 남은 점수 이내만 선택 가능
                             else {
-                                isSelectable = canSelectGuardianEnemyPiece(piece, x, y, guardian);
+                                isSelectable = isSelectedSelfGroup || canSelectGuardianEnemyPiece(piece, x, y, guardian);
                             }
 
                             if (isSelectable) {
@@ -1831,12 +2108,12 @@
 
                         if (guardian?.active) {
                             const selfPos = guardian.selected_self;
+                            const selfGroup = guardian.selected_self_group || [];
                             const enemyList = guardian.selected_enemy || [];
 
                             const isSelfSelected =
-                                selfPos &&
-                                selfPos[0] === x &&
-                                selfPos[1] === y;
+                                selfGroup.some(pos => pos[0] === x && pos[1] === y) ||
+                                (selfPos && selfPos[0] === x && selfPos[1] === y);
 
                             const isEnemySelected = enemyList.some(pos => pos[0] === x && pos[1] === y);
 
@@ -1905,6 +2182,12 @@
                     if (!res.ok) return;
                     const data = await res.json();
                     selectedLegalMoves = Array.isArray(data.moves) ? data.moves : [];
+                    const breedingQueens = getKingBreedingQueens(x, y);
+                    for (const pos of breedingQueens) {
+                        if (!selectedLegalMoves.some(move => move[0] === pos[0] && move[1] === pos[1])) {
+                            selectedLegalMoves.push(pos);
+                        }
+                    }
                 } catch (err) {
                     console.error(err);
                 }
@@ -1922,17 +2205,78 @@
                 }
                 if (gameEnded || !roomId || !myColor || myColor === "S") return;
                 if (!currentState || !currentBoard) return;
-                if (myColor !== currentState.turn) return;
+                const ambushPreGame = armedAugmentId === "ambush_setup" && currentState.move_count === 0;
+                if (myColor !== currentState.turn && !ambushPreGame) return;
 
                 const piece = currentBoard[y][x];
 
                 if (armedAugmentId === "pawn_evolution") {
                     if (piece && piece.color === myColor && piece.name === "P") {
                         augmentTarget = { x, y };
+                        augmentSecondTarget = null;
                         selected = null;
                         selectedLegalMoves = [];
                         updateActivatableAugmentUI();
                         renderBoardFromState(currentState);
+                    }
+                    return;
+                }
+
+                if (armedAugmentId === "emergency_escape") {
+                    if (!augmentTarget) {
+                        if (piece && piece.color === myColor && piece.name === "K") {
+                            augmentTarget = { x, y };
+                            augmentSecondTarget = null;
+                            selected = null;
+                            selectedLegalMoves = [];
+                            loadAugmentTargetMoves(x, y).then(() => renderBoardFromState(currentState));
+                            updateActivatableAugmentUI();
+                            renderBoardFromState(currentState);
+                        }
+                    } else if (augmentTargetMoves.some(move => move[0] === x && move[1] === y)) {
+                        augmentSecondTarget = { x, y };
+                        selected = null;
+                        selectedLegalMoves = [];
+                        updateActivatableAugmentUI();
+                        renderBoardFromState(currentState);
+                    }
+                    return;
+                }
+
+                if (armedAugmentId === "ambush_setup") {
+                    if (piece && piece.color === myColor) {
+                        if (augmentTarget && augmentTarget.x === x && augmentTarget.y === y) {
+                            augmentTarget = null;
+                            augmentSecondTarget = null;
+                            augmentTargetMoves = [];
+                            selected = null;
+                            selectedLegalMoves = [];
+                            updateActivatableAugmentUI();
+                            renderBoardFromState(currentState);
+                            return;
+                        }
+
+                        augmentTarget = { x, y };
+                        augmentSecondTarget = null;
+                        selected = null;
+                        selectedLegalMoves = [];
+                        loadAugmentTargetMoves(x, y).then(() => {
+                            if (augmentTarget && augmentTarget.x === x && augmentTarget.y === y && augmentTargetMoves.length === 0) {
+                                augmentTarget = null;
+                                augmentSecondTarget = null;
+                            }
+                            updateActivatableAugmentUI();
+                            renderBoardFromState(currentState);
+                        });
+                        updateActivatableAugmentUI();
+                        renderBoardFromState(currentState);
+                    } else if (augmentTargetMoves.some(move => move[0] === x && move[1] === y)) {
+                        augmentSecondTarget = { x, y };
+                        selected = null;
+                        selectedLegalMoves = [];
+                        updateActivatableAugmentUI();
+                        renderBoardFromState(currentState);
+                        confirmActivatableAugment();
                     }
                     return;
                 }
@@ -1942,6 +2286,22 @@
                     selected = { x, y };
                     loadLegalMoves(x, y);
                     renderBoardFromState(currentState);
+                    return;
+                }
+
+                const selectedPiece = currentBoard?.[selected.y]?.[selected.x];
+                const canUseKingBreeding =
+                    selectedPiece &&
+                    selectedPiece.color === myColor &&
+                    selectedPiece.name === "K" &&
+                    piece &&
+                    piece.color === myColor &&
+                    piece.name === "Q" &&
+                    Math.max(Math.abs(x - selected.x), Math.abs(y - selected.y)) === 1 &&
+                    !!getOwnedAugmentById("king_breeding");
+
+                if (canUseKingBreeding) {
+                    triggerKingBreeding(selected.x, selected.y, x, y);
                     return;
                 }
 
@@ -1987,6 +2347,42 @@
                     if (data.result && data.result.message) {
                         const status = document.getElementById("status");
                         if (status) status.innerText = data.result.message;
+                    }
+                    selected = null;
+                    selectedLegalMoves = [];
+                    if (data.state) {
+                        renderBoardFromState(data.state);
+                    }
+                } catch (err) {
+                    console.error(err);
+                }
+            }
+
+            async function triggerKingBreeding(x1, y1, x2, y2) {
+                if (augmentOpen) return;
+                if (gameEnded || !roomId || !myColor || myColor === "S") return;
+                try {
+                    const res = await fetch(`${API_BASE}/rooms/${roomId}/augment/activate`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            player_id: playerId,
+                            augment_id: "king_breeding",
+                            x: x1,
+                            y: y1,
+                            x2,
+                            y2
+                        })
+                    });
+                    const data = await res.json();
+                    if (!res.ok) {
+                        throw new Error(data?.detail || "king breeding failed");
+                    }
+                    selected = null;
+                    selectedLegalMoves = [];
+                    clearAugmentActivationState();
+                    if (data?.state) {
+                        renderBoardFromState(data.state);
                     }
                 } catch (err) {
                     console.error(err);
@@ -2096,6 +2492,69 @@
                 return "증강";
             }
 
+            /* DEBUG AUGMENT PANEL START */
+            function updateDebugPanelVisibility() {
+                const panel = document.getElementById("debugAugmentPanel");
+                if (!panel) return;
+                panel.classList.toggle("show", debugEnabled);
+            }
+
+            function populateDebugAugmentSelect() {
+                const select = document.getElementById("debugAugmentSelect");
+                if (!select) return;
+                select.innerHTML = "";
+                debugAugmentCatalog.forEach((augment) => {
+                    const option = document.createElement("option");
+                    option.value = augment.id;
+                    option.innerText = `[${tierLabel(augment.tier)}] ${augment.title}`;
+                    select.appendChild(option);
+                });
+            }
+
+            async function loadDebugAugmentCatalog() {
+                if (!debugEnabled) return;
+                try {
+                    const res = await fetch(`${API_BASE}/debug/augments`);
+                    if (!res.ok) return;
+                    const data = await res.json();
+                    debugAugmentCatalog = Array.isArray(data.augments) ? data.augments : [];
+                    populateDebugAugmentSelect();
+                } catch (err) {
+                    console.error(err);
+                }
+            }
+
+            async function debugGrantAugment() {
+                if (!debugEnabled || !roomId || !playerId) return;
+                const targetColor = document.getElementById("debugTargetColor")?.value || "W";
+                const augmentId = document.getElementById("debugAugmentSelect")?.value;
+                if (!augmentId) return;
+
+                try {
+                    const res = await fetch(`${API_BASE}/rooms/${roomId}/debug/grant_augment`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            player_id: playerId,
+                            target_color: targetColor,
+                            augment_id: augmentId,
+                        })
+                    });
+                    const data = await res.json();
+                    if (!res.ok) {
+                        throw new Error(data?.detail || "debug grant failed");
+                    }
+                    if (data?.state) {
+                        renderBoardFromState(data.state);
+                    }
+                } catch (err) {
+                    console.error(err);
+                    const status = document.getElementById("status");
+                    if (status) status.innerText = err.message || "증강 지급 실패";
+                }
+            }
+            /* DEBUG AUGMENT PANEL END */
+
             function normalizeTier(tier) {
                 if (tier === "silver" || tier === "gold" || tier === "diamond") return tier;
                 return "silver";
@@ -2179,6 +2638,14 @@
                 }
             }
 
+            function getAugmentRemainingMs(augmentState, fallbackMs = 25000) {
+                const total = Number(augmentState?.duration_ms ?? fallbackMs);
+                const startTime = Number(augmentState?.start_time ?? 0);
+                if (!startTime) return total;
+                const elapsed = Math.max(0, Date.now() - startTime * 1000);
+                return Math.max(0, total - elapsed);
+            }
+
             function setAugmentBarTier(tier) {
                 const bar = document.getElementById("augmentBar");
                 if (!bar) return;
@@ -2239,7 +2706,8 @@
                 tier = "silver",
                 myTurn = true,
                 options = DEBUG_AUGMENTS,
-                durationMs = 25000
+                durationMs = 25000,
+                remainingMs = durationMs
             } = {}) {
                 const overlay = document.getElementById("augmentOverlay");
                 hideGuardianOverlay();
@@ -2251,9 +2719,11 @@
                 augmentOpen = true;
                 augmentLocked = false;
                 selectedAugmentIndex = null;
+                augmentBoardPreview = false;
 
                 overlay.style.display = "";
                 overlay.classList.add("show");
+                updateAugmentOverlayMode();
                 setAugmentBarTier(tier);
 
                 if (myTurn) setAugmentStatus("증강을 선택하세요");
@@ -2266,7 +2736,7 @@
                     if (!bar) return;
 
                     if (myTurn) {
-                        startAugmentTimer(durationMs);
+                        startAugmentTimer(Math.max(0, Math.min(durationMs, remainingMs)));
                     } else {
                         disableAugmentCards();
                         clearAugmentTimer();
@@ -2304,6 +2774,8 @@
                 augmentOpen = false;
                 augmentLocked = false;
                 selectedAugmentIndex = null;
+                augmentBoardPreview = false;
+                updateAugmentOverlayMode();
 
                 const statusEl = document.getElementById("augmentStatus");
                 if (statusEl) statusEl.innerText = "증강을 선택하세요";
@@ -2471,6 +2943,8 @@
                             augment_id: armedAugmentId,
                             x: augmentTarget.x,
                             y: augmentTarget.y,
+                            x2: augmentSecondTarget?.x ?? null,
+                            y2: augmentSecondTarget?.y ?? null,
                             choice,
                         })
                     });
@@ -2510,6 +2984,8 @@
             ensurePlayerId();
             renderEmptyBoard();
             renderOwnedAugments();
+            updateDebugPanelVisibility();
+            loadDebugAugmentCatalog();
             setClockUI({
                 W: 600,
                 B: 600,
@@ -2674,8 +3150,7 @@
                 // 이미 내 기물을 골랐고, 그 같은 기물을 다시 누르면 취소 시도
                 if (
                     guardianState.selected_self &&
-                    guardianState.selected_self[0] === x &&
-                    guardianState.selected_self[1] === y &&
+                    (guardianState.selected_self_group || [guardianState.selected_self]).some(pos => pos[0] === x && pos[1] === y) &&
                     (!guardianState.selected_enemy || guardianState.selected_enemy.length === 0)
                 ) {
                     try {

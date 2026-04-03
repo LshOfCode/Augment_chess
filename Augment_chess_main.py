@@ -43,6 +43,14 @@ class Board:
 
         if (
             piece.name == "B"
+            and any(p is piece for p in effects.get("twin_bishops", []))
+            and self._effect_piece_is(piece.color, "weakened_bishop_piece", piece)
+        ):
+            return "wtb"
+        if piece.name == "B" and any(p is piece for p in effects.get("twin_bishops", [])):
+            return "tb"
+        if (
+            piece.name == "B"
             and effects.get("bishop_awakened")
             and self._effect_piece_is(piece.color, "weakened_bishop_piece", piece)
         ):
@@ -59,6 +67,8 @@ class Board:
             return "sr"
         if piece.name == "Q" and effects.get("night_queen"):
             return "nq"
+        if self._effect_piece_is(piece.color, "pawn_vs_pawn_piece", piece):
+            return "sp"
         if self._effect_piece_is(piece.color, "weakened_bishop_piece", piece):
             return "wb"
         if self._effect_piece_is(piece.color, "weakened_rook_piece", piece):
@@ -69,11 +79,117 @@ class Board:
             return "cp"
         return None
 
+    def guardian_piece_value(self, piece: Optional[Piece]) -> int:
+        if piece is None:
+            return 0
+        skin = self._piece_skin_code(piece)
+        if skin == "sp":
+            return 2
+        if skin == "wb":
+            return 2
+        if skin == "wr":
+            return 4
+        if skin == "sb":
+            return 5
+        if skin == "swb":
+            return 4
+        if skin == "sr":
+            return 7
+        if skin == "swr":
+            return 6
+        if skin == "tb":
+            return 7
+        if skin == "wtb":
+            return 6
+        if skin == "mb":
+            return 5
+        if skin == "cp":
+            return 9
+        if skin == "nq":
+            return 12
+        if piece.name == "P":
+            return 1
+        if piece.name in {"N", "B"}:
+            return 3
+        if piece.name == "R":
+            return 5
+        if piece.name == "Q":
+            return 9
+        return 0
+
+    def is_minor_piece(self, piece: Optional[Piece]) -> bool:
+        if piece is None:
+            return False
+        skin = self._piece_skin_code(piece)
+        if piece.name == "N":
+            return True
+        return skin in {None, "wb", "sb", "swb"} and piece.name == "B"
+
+    def guardian_linked_positions(self, piece: Optional[Piece]) -> List[Tuple[int, int]]:
+        coords = self._find_piece_coords(piece)
+        if coords is None:
+            return []
+        if piece and piece.name == "B":
+            twins = self.effects[piece.color].get("twin_bishops", [])
+            if any(p is piece for p in twins):
+                positions = []
+                for twin in twins:
+                    twin_coords = self._find_piece_coords(twin)
+                    if twin_coords is not None:
+                        positions.append(twin_coords)
+                if positions:
+                    return positions
+        return [coords]
+
     def _center_squares(self):
         return {(3, 3), (4, 3), (3, 4), (4, 4)}
 
     def _winner_for_removed_king(self, removed_color: str) -> str:
         return "B" if removed_color == "W" else "W"
+
+    def _piece_on_board(self, piece: Optional[Piece]) -> bool:
+        if piece is None:
+            return False
+        for row in self.grid:
+            for cell in row:
+                if cell is piece:
+                    return True
+        return False
+
+    def _remove_piece_ref(self, piece: Optional[Piece]):
+        if piece is None:
+            return
+        for y in range(8):
+            for x in range(8):
+                if self.grid[y][x] is piece:
+                    self.grid[y][x] = None
+                    return
+
+    def _find_piece_coords(self, piece: Optional[Piece]) -> Optional[Tuple[int, int]]:
+        if piece is None:
+            return None
+        for y in range(8):
+            for x in range(8):
+                if self.grid[y][x] is piece:
+                    return (x, y)
+        return None
+
+    def _sync_twin_bishops(self, color: str):
+        twins = self.effects[color].get("twin_bishops")
+        if not twins:
+            return
+        alive = [piece for piece in twins if self._piece_on_board(piece)]
+        if len(alive) == 1:
+            self._remove_piece_ref(alive[0])
+            alive = []
+        if alive:
+            self.effects[color]["twin_bishops"] = alive
+        else:
+            self.effects[color].pop("twin_bishops", None)
+
+    def _sync_all_special_links(self):
+        self._sync_twin_bishops("W")
+        self._sync_twin_bishops("B")
 
     def _explode_missile_bishop(self, x: int, y: int, owner_color: str):
         removed_king_colors = []
@@ -103,11 +219,32 @@ class Board:
         self.special_win_reason = "bishop_missile"
 
     def _activate_king_infection(self, x1: int, y1: int, x2: int, y2: int, piece: Piece, target: Piece):
+        def create_infected_piece() -> Piece:
+            infected_piece = Piece(target.name, piece.color)
+            if self._effect_piece_is(target.color, "colossus_piece", target):
+                self.effects[target.color].pop("colossus_piece", None)
+                colossus_wait = self.effects[target.color].pop("colossus_wait", None)
+                self.effects[piece.color]["colossus_piece"] = infected_piece
+                if colossus_wait is not None:
+                    self.effects[piece.color]["colossus_wait"] = colossus_wait
+            return infected_piece
+
+        if target.name == "K":
+            if self.effects[piece.color].get("infection"):
+                self.grid[y2][x2] = create_infected_piece()
+                self.last_move = (x1, y1, x1, y1)
+                self.halfmove_clock = 0
+                self.en_passant_target = None
+                self._sync_all_special_links()
+                return True
+            return False
+
         if self.effects[piece.color].get("infection"):
-            self.grid[y2][x2] = Piece(target.name, piece.color)
+            self.grid[y2][x2] = create_infected_piece()
             self.last_move = (x1, y1, x1, y1)
             self.halfmove_clock = 0
             self.en_passant_target = None
+            self._sync_all_special_links()
             return True
 
         if self.effects[piece.color].get("weak_infection"):
@@ -115,6 +252,7 @@ class Board:
             self.last_move = (x1, y1, x1, y1)
             self.halfmove_clock = 0
             self.en_passant_target = None
+            self._sync_all_special_links()
             return True
 
         return False
@@ -205,6 +343,13 @@ class Board:
             if self.effects[piece.color]["pawn_slow"] <= 0:
                 self.effects[piece.color].pop("pawn_slow", None)
 
+        twin_pending = self.effects[moved_color].get("twin_bishop_extra")
+        if twin_pending is not None:
+            coords = self._find_piece_coords(twin_pending)
+            if coords is not None and self.get_legal_moves(coords[0], coords[1]):
+                return {"success": True, "extra_turn": "twin_bishop"}
+            self.effects[moved_color].pop("twin_bishop_extra", None)
+
         self.finish_turn(moved_color, apply_special_check=True)
         return {"success": True}
 
@@ -284,6 +429,16 @@ class Board:
 
         self.grid[y2][x2] = piece
         self.grid[y1][x1] = None
+        twins = self.effects[piece.color].get("twin_bishops")
+        if piece.name == "B" and twins and any(p is piece for p in twins):
+            if self.effects[piece.color].get("twin_bishop_extra") is piece:
+                self.effects[piece.color].pop("twin_bishop_extra", None)
+            else:
+                others = [p for p in twins if p is not piece and self._piece_on_board(p)]
+                if others:
+                    self.effects[piece.color]["twin_bishop_extra"] = others[0]
+                else:
+                    self.effects[piece.color].pop("twin_bishop_extra", None)
         if captured_piece is not None and captured_piece.name in {"B", "N"}:
             owner = captured_piece.color
             if self.effects[owner].get("reorganize", 0) > 0:
@@ -330,6 +485,8 @@ class Board:
         else:
             self.halfmove_clock += 1
 
+        self._sync_all_special_links()
+
     def is_valid_move(self, x1: int, y1: int, x2: int, y2: int) -> bool:
         if not self.in_bounds(x1, y1) or not self.in_bounds(x2, y2):
             return False
@@ -339,6 +496,9 @@ class Board:
         piece = self.grid[y1][x1]
         target = self.grid[y2][x2]
         if piece is None:
+            return False
+        twin_pending = self.effects[piece.color].get("twin_bishop_extra")
+        if twin_pending is not None and piece is not twin_pending:
             return False
         if target and target.color == piece.color:
             return False
@@ -513,7 +673,7 @@ class Board:
                     for promo in ("Q", "R", "B", "N"):
                         temp = deepcopy(self)
                         temp._apply_move(x, y, xx, yy, promo)
-                        if not temp.is_in_check(piece.color):
+                        if self._ignore_check_rules(piece.color) or not temp.is_in_check(piece.color):
                             legal_promotion_found = True
                             break
                     if legal_promotion_found:
@@ -521,33 +681,35 @@ class Board:
                 else:
                     temp = deepcopy(self)
                     temp._apply_move(x, y, xx, yy)
-                    if not temp.is_in_check(piece.color):
+                    if self._ignore_check_rules(piece.color) or not temp.is_in_check(piece.color):
                         moves.append((xx, yy))
 
         return moves
-    def find_king(self, color: str):
+    def find_kings(self, color: str):
+        kings = []
         for y in range(8):
             for x in range(8):
                 p = self.grid[y][x]
                 if p is not None and p.name == "K" and p.color == color:
-                    return (x, y)
-        return None
-    
-    def is_in_check(self, color: str) -> bool:
-        king_pos = None
-        for y in range(8):
-            for x in range(8):
-                p = self.grid[y][x]
-                if p and p.name == "K" and p.color == color:
-                    king_pos = (x, y)
-                    break
-            if king_pos:
-                break
-        if king_pos is None:
-            return False
+                    kings.append((x, y))
+        return kings
 
+    def find_king(self, color: str):
+        kings = self.find_kings(color)
+        if kings:
+            return kings[0]
+        return None
+
+    def _ignore_check_rules(self, color: str) -> bool:
+        return bool(self.effects[color].get("king_copy_active")) and len(self.find_kings(color)) >= 2
+
+    def attacked_king_positions(self, color: str):
+        king_positions = self.find_kings(color)
+        if not king_positions:
+            return []
+
+        attacked = []
         enemy = "B" if color == "W" else "W"
-        kx, ky = king_pos
         for y in range(8):
             for x in range(8):
                 p = self.grid[y][x]
@@ -555,16 +717,25 @@ class Board:
                     continue
                 if p.name == "P":
                     direction = -1 if p.color == "W" else 1
-                    if (kx, ky) in [(x - 1, y + direction), (x + 1, y + direction)]:
-                        return True
+                    pawn_attacks = {(x - 1, y + direction), (x + 1, y + direction)}
+                    for pos in king_positions:
+                        if pos in pawn_attacks and pos not in attacked:
+                            attacked.append(pos)
                     continue
                 if p.name == "K":
-                    if max(abs(kx - x), abs(ky - y)) == 1:
-                        return True
+                    for kx, ky in king_positions:
+                        if max(abs(kx - x), abs(ky - y)) == 1 and (kx, ky) not in attacked:
+                            attacked.append((kx, ky))
                     continue
-                if self.is_valid_move(x, y, kx, ky):
-                    return True
-        return False
+                for kx, ky in king_positions:
+                    if self.is_valid_move(x, y, kx, ky) and (kx, ky) not in attacked:
+                        attacked.append((kx, ky))
+        return attacked
+    
+    def is_in_check(self, color: str) -> bool:
+        if self._ignore_check_rules(color):
+            return False
+        return bool(self.attacked_king_positions(color))
 
     def _has_any_legal_move(self, color: str) -> bool:
         for y in range(8):
@@ -574,7 +745,12 @@ class Board:
                     return True
         return False
 
+    def _has_multi_king_state(self) -> bool:
+        return len(self.find_kings("W")) > 1 or len(self.find_kings("B")) > 1
+
     def _insufficient_material(self) -> bool:
+        if self._has_multi_king_state():
+            return False
         pieces = []
         bishops = []
         for y in range(8):
@@ -598,7 +774,35 @@ class Board:
                 return bishops[0][1] == bishops[1][1]
         return False
 
+    def _anti_draw_winner(self) -> Optional[str]:
+        white = bool(self.effects["W"].get("anti_draw_win"))
+        black = bool(self.effects["B"].get("anti_draw_win"))
+        if white == black:
+            return None
+        return "W" if white else "B"
+
     def get_game_state(self):
+        self._sync_all_special_links()
+        white_kings = self.find_kings("W")
+        black_kings = self.find_kings("B")
+        if not white_kings and black_kings:
+            return {
+                "check": False,
+                "checkmate": False,
+                "draw": False,
+                "draw_reason": None,
+                "winner": "B",
+                "special_win": "king_capture",
+            }
+        if not black_kings and white_kings:
+            return {
+                "check": False,
+                "checkmate": False,
+                "draw": False,
+                "draw_reason": None,
+                "winner": "W",
+                "special_win": "king_capture",
+            }
         if self.forced_winner is not None:
             return {
                 "check": False,
@@ -617,32 +821,59 @@ class Board:
             "draw": False,
             "draw_reason": None,
             "winner": None,
+            "special_win": None,
+            "attacked_kings": {
+                "W": self.attacked_king_positions("W"),
+                "B": self.attacked_king_positions("B"),
+            },
         }
 
         if check and not moves_exist:
+            if self.effects[self.turn].get("king_copy_active"):
+                return result
             result["checkmate"] = True
             result["winner"] = "B" if self.turn == "W" else "W"
             return result
 
         if not check and not moves_exist:
-            result["draw"] = True
-            result["draw_reason"] = "stalemate"
+            anti_draw_winner = self._anti_draw_winner()
+            if anti_draw_winner is not None:
+                result["winner"] = anti_draw_winner
+                result["special_win"] = "no_draw_win"
+            else:
+                result["draw"] = True
+                result["draw_reason"] = "stalemate"
             return result
 
         if self.halfmove_clock >= 100:
-            result["draw"] = True
-            result["draw_reason"] = "fifty_move"
+            anti_draw_winner = self._anti_draw_winner()
+            if anti_draw_winner is not None:
+                result["winner"] = anti_draw_winner
+                result["special_win"] = "no_draw_win"
+            else:
+                result["draw"] = True
+                result["draw_reason"] = "fifty_move"
             return result
 
         current_key = self._position_key()
         if self.position_history.get(current_key, 0) >= 3:
-            result["draw"] = True
-            result["draw_reason"] = "threefold_repetition"
+            anti_draw_winner = self._anti_draw_winner()
+            if anti_draw_winner is not None:
+                result["winner"] = anti_draw_winner
+                result["special_win"] = "no_draw_win"
+            else:
+                result["draw"] = True
+                result["draw_reason"] = "threefold_repetition"
             return result
 
         if self._insufficient_material():
-            result["draw"] = True
-            result["draw_reason"] = "insufficient_material"
+            anti_draw_winner = self._anti_draw_winner()
+            if anti_draw_winner is not None:
+                result["winner"] = anti_draw_winner
+                result["special_win"] = "no_draw_win"
+            else:
+                result["draw"] = True
+                result["draw_reason"] = "insufficient_material"
             return result
 
         return result
@@ -726,6 +957,11 @@ class Board:
         if colossus_wait is not None:
             colossus_wait -= 1
             if colossus_wait <= 0:
+                for y in range(8):
+                    for x in range(8):
+                        piece = self.grid[y][x]
+                        if piece and piece.color == player and piece.name == "P":
+                            self.grid[y][x] = None
                 self.effects[player].pop("colossus_wait", None)
             else:
                 self.effects[player]["colossus_wait"] = colossus_wait
